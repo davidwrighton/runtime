@@ -629,7 +629,10 @@ void EEStartupHelper()
     {
         g_fEEInit = true;
 
-#ifndef CROSSGEN_COMPILE
+#if !defined(CROSSGEN_COMPILE) && defined(TARGET_AMD64)
+        // Initialize Ymm handling extremely early
+        XmmYmmStateSupport()
+#endif
 
 #ifndef TARGET_UNIX
         ::SetConsoleCtrlHandler(DbgCtrlCHandler, TRUE/*add*/);
