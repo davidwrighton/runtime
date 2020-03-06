@@ -621,10 +621,10 @@ PTR_ReadyToRunInfo ReadyToRunInfo::Initialize(Module * pModule, AllocMemTracker 
 ReadyToRunInfo::ReadyToRunInfo(Module * pModule, PEImageLayout * pLayout, READYTORUN_HEADER * pHeader, NativeImage *pNativeImage, AllocMemTracker *pamTracker)
     : m_pModule(pModule),
     m_pHeader(pHeader),
+    m_readyToRunCodeDisabled(FALSE),
     m_pNativeImage(pNativeImage),
     m_Crst(CrstReadyToRunEntryPointToMethodDescMap),
-    m_pPersistentInlineTrackingMap(NULL),
-    m_readyToRunCodeDisabled(FALSE)
+    m_pPersistentInlineTrackingMap(NULL)
 {
     STANDARD_VM_CONTRACT;
 
