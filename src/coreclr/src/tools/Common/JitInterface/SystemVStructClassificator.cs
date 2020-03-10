@@ -249,143 +249,200 @@ namespace Internal.JitInterface
                     if (VectorFieldLayoutAlgorithm.IsVectorType(instantiatedType) ||
                         VectorOfTFieldLayoutAlgorithm.IsVectorOfTType(instantiatedType))
                     {
-                        return false;
-                    }
-                }
-            }
+                        // The SIMD intrinsic types can only be used as the only field in a structure, and must begin at
+                        // the start of the structure to be passed in registers.
+                        if (startOffsetOfStruct != 0)
+                            return false;
 
-            MetadataType mdType = typeDesc as MetadataType;
-            Debug.Assert(mdType != null);
-
-            TypeDesc firstFieldElementType = firstField.FieldType;
-            int firstFieldSize = firstFieldElementType.GetElementSize().AsInt;
-
-            // A fixed buffer type is always a value type that has exactly one value type field at offset 0
-            // and who's size is an exact multiple of the size of the field.
-            // It is possible that we catch a false positive with this check, but that chance is extremely slim
-            // and the user can always change their structure to something more descriptive of what they want
-            // instead of adding additional padding at the end of a one-field structure.
-            // We do this check here to save looking up the FixedBufferAttribute when loading the field
-            // from metadata.
-            bool isFixedBuffer = numIntroducedFields == 1
-                                    && firstFieldElementType.IsValueType
-                                    && firstField.Offset.AsInt == 0
-                                    && mdType.HasLayout()
-                                    && ((typeDesc.GetElementSize().AsInt % firstFieldSize) == 0);
-
-            if (isFixedBuffer)
-            {
-                numIntroducedFields = typeDesc.GetElementSize().AsInt / firstFieldSize;
-            }
-
-            int fieldIndex = 0;
-            foreach (FieldDesc field in FieldEnumerator.GetInstanceFields(typeDesc, isFixedBuffer, numIntroducedFields))
-            {
-                Debug.Assert(fieldIndex < numIntroducedFields);
-
-                int fieldOffset = isFixedBuffer ? fieldIndex * firstFieldSize : field.Offset.AsInt;
-                int normalizedFieldOffset = fieldOffset + startOffsetOfStruct;
-
-                int fieldSize = field.FieldType.GetElementSize().AsInt;
-
-                // The field can't span past the end of the struct.
-                if ((normalizedFieldOffset + fieldSize) > helper.StructSize)
-                {
-                    Debug.Assert(false, "Invalid struct size. The size of fields and overall size don't agree");
-                    return false;
-                }
-
-                SystemVClassificationType fieldClassificationType;
-                if (typeDesc.IsByReferenceOfT)
-                {
-                    // ByReference<T> is a special type whose single IntPtr field holds a by-ref potentially interior pointer to GC
-                    // memory, so classify its field as such
-                    Debug.Assert(numIntroducedFields == 1);
-                    Debug.Assert(field.FieldType.IsWellKnownType(WellKnownType.IntPtr));
-
-                    fieldClassificationType = SystemVClassificationTypeIntegerByRef;
-                }
-                else
-                {
-                    fieldClassificationType = TypeDef2SystemVClassification(field.FieldType);
-                }
-
-                if (fieldClassificationType == SystemVClassificationTypeStruct)
-                {
-                    bool inEmbeddedStructPrev = helper.InEmbeddedStruct;
-                    helper.InEmbeddedStruct = true;
-
-                    bool structRet = false;
-                    structRet = ClassifyEightBytes(field.FieldType, ref helper, normalizedFieldOffset);
-                    
-                    helper.InEmbeddedStruct = inEmbeddedStructPrev;
-
-                    if (!structRet)
-                    {
-                        // If the nested struct says not to enregister, there's no need to continue analyzing at this level. Just return do not enregister.
-                        return false;
-                    }
-
-                    continue;
-                }
-
-                if ((normalizedFieldOffset % fieldSize) != 0)
-                {
-                    // The spec requires that struct values on the stack from register passed fields expects
-                    // those fields to be at their natural alignment.
-                    return false;
-                }
-
-                if (normalizedFieldOffset <= helper.LargestFieldOffset)
-                {
-                    // Find the field corresponding to this offset and update the size if needed.
-                    // If the offset matches a previously encountered offset, update the classification and field size.
-                    int i;
-                    for (i = helper.CurrentUniqueOffsetField - 1; i >= 0; i--)
-                    {
-                        if (helper.FieldOffsets[i] == normalizedFieldOffset)
+                        int vectorSize = instantiatedType.GetElementSize().AsInt;
+                        
+                        if (instantiatedType.InstanceFieldSize <= SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES)
                         {
-                            if (fieldSize > helper.FieldSizes[i])
+                            // Vector64<T> does not attempt to follow the SysV abi, as we do not have any plan to support MMX
+                            return false;
+                        }
+
+                        // Either Vectors live alone in a struct, or they are unioned exactly.
+                        if (helper.CurrentUniqueOffsetField == 0)
+                        {
+                            helper.FieldClassifications[helper.CurrentUniqueOffsetField] = SystemVClassificationTypeSSE;
+                            helper.FieldSizes[helper.CurrentUniqueOffsetField] = SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES;
+                            helper.FieldOffsets[helper.CurrentUniqueOffsetField] = 0;
+                            helper.CurrentUniqueOffsetField++;
+
+                            helper.FieldClassifications[helper.CurrentUniqueOffsetField] = SystemVClassificationTypeSSEUp;
+                            helper.FieldSizes[helper.CurrentUniqueOffsetField] = vectorSize - SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES;
+                            helper.FieldOffsets[helper.CurrentUniqueOffsetField] = SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES;
+                            helper.CurrentUniqueOffsetField++;
+                        }
+                        else
+                        {
+                            if (helper.CurrentUniqueOffsetField != 2)
                             {
-                                helper.FieldSizes[i] = fieldSize;
+                                return false;
                             }
 
-                            helper.FieldClassifications[i] = ReClassifyField(helper.FieldClassifications[i], fieldClassificationType);
+                            if (helper.FieldClassifications[1] != SystemVClassificationTypeSSEUp)
+                            {
+                                return false;
+                            }
 
-                            break;
+                            if (helper.FieldSizes[1] != vectorSize - SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES)
+                            {
+                                return false;
+                            }
                         }
+
+                        Debug.Assert(helper.CurrentUniqueOffsetField < SYSTEMV_MAX_NUM_FIELDS_IN_REGISTER_PASSED_STRUCT);
+                    }
+                }
+            }
+            else
+            {
+                MetadataType mdType = typeDesc as MetadataType;
+                Debug.Assert(mdType != null);
+
+                TypeDesc firstFieldElementType = firstField.FieldType;
+                int firstFieldSize = firstFieldElementType.GetElementSize().AsInt;
+
+                // A fixed buffer type is always a value type that has exactly one value type field at offset 0
+                // and who's size is an exact multiple of the size of the field.
+                // It is possible that we catch a false positive with this check, but that chance is extremely slim
+                // and the user can always change their structure to something more descriptive of what they want
+                // instead of adding additional padding at the end of a one-field structure.
+                // We do this check here to save looking up the FixedBufferAttribute when loading the field
+                // from metadata.
+                bool isFixedBuffer = numIntroducedFields == 1
+                                        && firstFieldElementType.IsValueType
+                                        && firstField.Offset.AsInt == 0
+                                        && mdType.HasLayout()
+                                        && ((typeDesc.GetElementSize().AsInt % firstFieldSize) == 0);
+
+                if (isFixedBuffer)
+                {
+                    numIntroducedFields = typeDesc.GetElementSize().AsInt / firstFieldSize;
+                }
+
+                int fieldIndex = 0;
+                foreach (FieldDesc field in FieldEnumerator.GetInstanceFields(typeDesc, isFixedBuffer, numIntroducedFields))
+                {
+                    Debug.Assert(fieldIndex < numIntroducedFields);
+
+                    int fieldOffset = isFixedBuffer ? fieldIndex * firstFieldSize : field.Offset.AsInt;
+                    int normalizedFieldOffset = fieldOffset + startOffsetOfStruct;
+
+                    int fieldSize = field.FieldType.GetElementSize().AsInt;
+
+                    if ((normalizedFieldOffset > 0) && (helper.StructSize > CLR_SYSTEMV_MAX_NON_VECTOR_STRUCT_BYTES_TO_PASS_IN_REGISTERS))
+                    {
+                        // Only vector structs can exceed the non-vector struct bytes sizeNo
+                        return false;
                     }
 
-                    if (i >= 0)
+                    // The field can't span past the end of the struct.
+                    if ((normalizedFieldOffset + fieldSize) > helper.StructSize)
                     {
-                        // The proper size of the union set of fields has been set above; continue to the next field.
+                        Debug.Assert(false, "Invalid struct size. The size of fields and overall size don't agree");
+                        return false;
+                    }
+
+                    SystemVClassificationType fieldClassificationType;
+                    if (typeDesc.IsByReferenceOfT)
+                    {
+                        // ByReference<T> is a special type whose single IntPtr field holds a by-ref potentially interior pointer to GC
+                        // memory, so classify its field as such
+                        Debug.Assert(numIntroducedFields == 1);
+                        Debug.Assert(field.FieldType.IsWellKnownType(WellKnownType.IntPtr));
+
+                        fieldClassificationType = SystemVClassificationTypeIntegerByRef;
+                    }
+                    else
+                    {
+                        fieldClassificationType = TypeDef2SystemVClassification(field.FieldType);
+                    }
+
+                    if (fieldClassificationType == SystemVClassificationTypeStruct)
+                    {
+                        bool inEmbeddedStructPrev = helper.InEmbeddedStruct;
+                        helper.InEmbeddedStruct = true;
+
+                        bool structRet = false;
+                        structRet = ClassifyEightBytes(field.FieldType, ref helper, normalizedFieldOffset);
+                        
+                        helper.InEmbeddedStruct = inEmbeddedStructPrev;
+
+                        if (!structRet)
+                        {
+                            // If the nested struct says not to enregister, there's no need to continue analyzing at this level. Just return do not enregister.
+                            return false;
+                        }
+
                         continue;
                     }
+
+                    if ((normalizedFieldOffset % fieldSize) != 0)
+                    {
+                        // The spec requires that struct values on the stack from register passed fields expects
+                        // those fields to be at their natural alignment.
+                        return false;
+                    }
+
+                    if (normalizedFieldOffset <= helper.LargestFieldOffset)
+                    {
+                        // Find the field corresponding to this offset and update the size if needed.
+                        // If the offset matches a previously encountered offset, update the classification and field size.
+                        int i;
+                        for (i = helper.CurrentUniqueOffsetField - 1; i >= 0; i--)
+                        {
+                            // Attempt to union a not vector field with a vector field
+                            // will not work enregistered.
+                            if (helper.FieldClassifications[i] == SystemVClassificationTypeSSEUp)
+                                return false;
+
+                            if (helper.FieldOffsets[i] == normalizedFieldOffset)
+                            {
+                                if (fieldSize > helper.FieldSizes[i])
+                                {
+                                    helper.FieldSizes[i] = fieldSize;
+                                }
+
+                                helper.FieldClassifications[i] = ReClassifyField(helper.FieldClassifications[i], fieldClassificationType);
+
+                                break;
+                            }
+                        }
+
+                        if (i >= 0)
+                        {
+                            // The proper size of the union set of fields has been set above; continue to the next field.
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        helper.LargestFieldOffset = (int)normalizedFieldOffset;
+                    }
+
+                    // Set the data for a new field.
+
+                    // The new field classification must not have been initialized yet.
+                    Debug.Assert(helper.FieldClassifications[helper.CurrentUniqueOffsetField] == SystemVClassificationTypeNoClass);
+
+                    // There are only a few field classifications that are allowed.
+                    Debug.Assert((fieldClassificationType == SystemVClassificationTypeInteger) ||
+                                (fieldClassificationType == SystemVClassificationTypeIntegerReference) ||
+                                (fieldClassificationType == SystemVClassificationTypeIntegerByRef) ||
+                                (fieldClassificationType == SystemVClassificationTypeSSE));
+
+                    helper.FieldClassifications[helper.CurrentUniqueOffsetField] = fieldClassificationType;
+                    helper.FieldSizes[helper.CurrentUniqueOffsetField] = fieldSize;
+                    helper.FieldOffsets[helper.CurrentUniqueOffsetField] = normalizedFieldOffset;
+
+                    Debug.Assert(helper.CurrentUniqueOffsetField < SYSTEMV_MAX_NUM_FIELDS_IN_REGISTER_PASSED_STRUCT);
+                    helper.CurrentUniqueOffsetField++;
+
+                    fieldIndex++;
                 }
-                else
-                {
-                    helper.LargestFieldOffset = (int)normalizedFieldOffset;
-                }
-
-                // Set the data for a new field.
-
-                // The new field classification must not have been initialized yet.
-                Debug.Assert(helper.FieldClassifications[helper.CurrentUniqueOffsetField] == SystemVClassificationTypeNoClass);
-
-                // There are only a few field classifications that are allowed.
-                Debug.Assert((fieldClassificationType == SystemVClassificationTypeInteger) ||
-                             (fieldClassificationType == SystemVClassificationTypeIntegerReference) ||
-                             (fieldClassificationType == SystemVClassificationTypeIntegerByRef) ||
-                             (fieldClassificationType == SystemVClassificationTypeSSE));
-
-                helper.FieldClassifications[helper.CurrentUniqueOffsetField] = fieldClassificationType;
-                helper.FieldSizes[helper.CurrentUniqueOffsetField] = fieldSize;
-                helper.FieldOffsets[helper.CurrentUniqueOffsetField] = normalizedFieldOffset;
-
-                Debug.Assert(helper.CurrentUniqueOffsetField < SYSTEMV_MAX_NUM_FIELDS_IN_REGISTER_PASSED_STRUCT);
-                helper.CurrentUniqueOffsetField++;
-
-                fieldIndex++;
             }
 
             AssignClassifiedEightByteTypes(ref helper);
@@ -397,10 +454,21 @@ namespace Internal.JitInterface
         private static void AssignClassifiedEightByteTypes(ref SystemVStructRegisterPassingHelper helper)
         {
             const int CLR_SYSTEMV_MAX_BYTES_TO_PASS_IN_REGISTERS = CLR_SYSTEMV_MAX_EIGHTBYTES_COUNT_TO_PASS_IN_REGISTERS * SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES;
-            Debug.Assert(CLR_SYSTEMV_MAX_BYTES_TO_PASS_IN_REGISTERS == SYSTEMV_MAX_NUM_FIELDS_IN_REGISTER_PASSED_STRUCT);
+            Debug.Assert(CLR_SYSTEMV_MAX_BYTES_TO_PASS_IN_REGISTERS <= SYSTEMV_MAX_NUM_FIELDS_IN_REGISTER_PASSED_STRUCT);
 
             if (!helper.InEmbeddedStruct)
             {
+                if ((helper.CurrentUniqueOffsetField == 2) && (helper.FieldClassifications[1] == SystemVClassificationTypeSSEUp))
+                {
+                    helper.EightByteCount = 2;
+                    helper.EightByteClassifications[0] = helper.FieldClassifications[0];
+                    helper.EightByteClassifications[1] = helper.FieldClassifications[1];
+                    helper.EightByteSizes[0] = helper.FieldSizes[0];
+                    helper.EightByteSizes[1] = helper.FieldSizes[1];
+                    helper.EightByteOffsets[0] = 0;
+                    helper.EightByteOffsets[1] = 8;
+                }
+                
                 int largestFieldOffset = helper.LargestFieldOffset;
                 Debug.Assert(largestFieldOffset != -1);
 

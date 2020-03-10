@@ -1118,7 +1118,7 @@ namespace Internal.JitInterface
         SystemVClassificationTypeIntegerReference   = 5,
         SystemVClassificationTypeIntegerByRef       = 6,
         SystemVClassificationTypeSSE                = 7,
-        // SystemVClassificationTypeSSEUp           = Unused, // Not supported by the CLR.
+        SystemVClassificationTypeSSEUp              = 8,
         // SystemVClassificationTypeX87             = Unused, // Not supported by the CLR.
         // SystemVClassificationTypeX87Up           = Unused, // Not supported by the CLR.
         // SystemVClassificationTypeComplexX87      = Unused, // Not supported by the CLR.
@@ -1127,7 +1127,8 @@ namespace Internal.JitInterface
     public struct SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR
     {
         public const int CLR_SYSTEMV_MAX_EIGHTBYTES_COUNT_TO_PASS_IN_REGISTERS = 2;
-        public const int CLR_SYSTEMV_MAX_STRUCT_BYTES_TO_PASS_IN_REGISTERS = 16;
+        public const int CLR_SYSTEMV_MAX_STRUCT_BYTES_TO_PASS_IN_REGISTERS = 32;
+        public const int CLR_SYSTEMV_MAX_NON_VECTOR_STRUCT_BYTES_TO_PASS_IN_REGISTERS = 16;
 
         public const int SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES = 8; // Size of an eightbyte in bytes.
         public const int SYSTEMV_MAX_NUM_FIELDS_IN_REGISTER_PASSED_STRUCT = 16; // Maximum number of fields in struct passed in registers

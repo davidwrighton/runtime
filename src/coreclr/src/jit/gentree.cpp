@@ -18635,6 +18635,8 @@ void ReturnTypeDesc::InitializeStructReturnType(Compiler* comp, CORINFO_CLASS_HA
             {
                 assert(i < MAX_RET_REG_COUNT);
                 m_regType[i] = comp->GetEightByteType(structDesc, i);
+
+                assert(m_regType[i] != SystemVClassificationTypeSSEUp); // These should always be handled in the SPK_PrimitiveType case above
             }
 
 #elif defined(TARGET_ARM64)

@@ -3072,6 +3072,7 @@ void Compiler::fgInitArgInfo(GenTreeCall* call)
 #endif // TARGET_ARM
                 {
                     size = 1;
+                    // TODO Can we hit here for vector struct by value?
                 }
             }
             else if (passStructByRef)

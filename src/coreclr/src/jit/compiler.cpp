@@ -705,7 +705,11 @@ var_types Compiler::getArgTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
 
     if (structDesc.passedInRegisters && (structDesc.eightByteCount != 1))
     {
-        // We can't pass this as a primitive type.
+        // We can't pass this as a primitive type unless it is a SIMD type.
+        if (structDesc.eightByteClassifications[1] == SystemVClassificationTypeSSEUp)
+        {
+            useType = GetEightByteType(structDesc, 1);
+        }
     }
     else if (structDesc.eightByteClassifications[0] == SystemVClassificationTypeSSE)
     {
@@ -950,6 +954,11 @@ var_types Compiler::getReturnTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
     {
         // Return classification is not always size based...
         canReturnInRegister = structDesc.passedInRegisters;
+        if (structDesc.eightByteClassifications[1] == SystemVClassificationTypeSSEUp)
+        {
+            useType           = GetEightByteType(structDesc, 1);
+            howToReturnStruct = SPK_PrimitiveType;
+        }
     }
 
 #endif // UNIX_AMD64_ABI
@@ -6975,6 +6984,19 @@ var_types Compiler::GetEightByteType(const SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASS
                 assert(false && "GetEightByteType Invalid SSE classification type.");
             }
             break;
+        case SystemVClassificationTypeSSEUp:
+            if (structDesc.eightByteSizes[slotNum] == 8)
+            {
+                eightByteType = TYP_SIMD16;
+                break;
+            }
+            else (structDesc.eightByteSizes[slotNum] == 24)
+            {
+                eightByteType = TYP_SIMD32;
+                break;
+            }
+
+            /* Fall through, as this isn't a known vector type */
         default:
             assert(false && "GetEightByteType Invalid classification type.");
             break;

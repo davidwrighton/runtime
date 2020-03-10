@@ -332,7 +332,8 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 int eightByteSize = (i == 0) ? descriptor.eightByteSizes0 : descriptor.eightByteSizes1;
                 SystemVClassificationType eightByteClassification = (i == 0) ? descriptor.eightByteClassifications0 : descriptor.eightByteClassifications1;
 
-                if (eightByteClassification != SystemVClassificationType.SystemVClassificationTypeSSE)
+                if ((eightByteClassification != SystemVClassificationType.SystemVClassificationTypeSSE) &&
+                    (eightByteClassification != SystemVClassificationType.SystemVClassificationTypeSSEUp))
                 {
                     if ((eightByteClassification == SystemVClassificationType.SystemVClassificationTypeIntegerReference) ||
                         (eightByteClassification == SystemVClassificationType.SystemVClassificationTypeIntegerByRef))
@@ -938,6 +939,8 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                                             case SystemVClassificationType.SystemVClassificationTypeSSE:
                                                 cFPRegs++;
                                                 break;
+                                            case SystemVClassificationType.SystemVClassificationTypeSSEUp:
+                                                break; // Doesn't use a register beyond that assigned to the SSE classification before
                                             default:
                                                 Debug.Assert(false);
                                                 break;
