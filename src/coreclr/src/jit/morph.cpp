@@ -3072,7 +3072,11 @@ void Compiler::fgInitArgInfo(GenTreeCall* call)
 #endif // TARGET_ARM
                 {
                     size = 1;
-                    // TODO Can we hit here for vector struct by value?
+#ifdef UNIX_AMD64_ABI
+                    // A SIMD register may be a multiple of the TARGET_POINTER size, not just 1
+                    if (varTypeIsSIMD(structBaseType))
+                        size = originalSize / TARGET_POINTER_SIZE;
+#endif // UNIX_AMD64_ABI
                 }
             }
             else if (passStructByRef)
@@ -3919,7 +3923,11 @@ GenTreeCall* Compiler::fgMorphArgs(GenTreeCall* call)
 #if FEATURE_MULTIREG_ARGS
         if (isStructArg)
         {
-            if (((argEntry->numRegs + argEntry->numSlots) > 1) || (isHfaArg && argx->TypeGet() == TYP_STRUCT))
+            if ((((argEntry->numRegs + argEntry->numSlots) > 1) || (isHfaArg && argx->TypeGet() == TYP_STRUCT))
+#ifdef UNIX_AMD64_ABI
+        && !varTypeIsSIMD(argx->TypeGet()) // TODO, understand if this is correct for Vector2/3
+#endif // UNIX_AMD64_ABI
+            )
             {
                 hasMultiregStructArgs = true;
             }
@@ -3934,7 +3942,12 @@ GenTreeCall* Compiler::fgMorphArgs(GenTreeCall* call)
         {
             // We must have exactly one register or slot.
             assert(((argEntry->numRegs == 1) && (argEntry->numSlots == 0)) ||
-                   ((argEntry->numRegs == 0) && (argEntry->numSlots == 1)));
+                   ((argEntry->numRegs == 0) && (argEntry->numSlots == 1))
+#ifdef UNIX_AMD64_ABI
+        || varTypeIsSIMD(argx->TypeGet()) // TODO, understand if this is correct for Vector2/3
+#endif // UNIX_AMD64_ABI
+
+                   );
         }
 #endif
 
@@ -4124,7 +4137,11 @@ void Compiler::fgMorphMultiregStructArgs(GenTreeCall* call)
         }
 
         unsigned size = (fgEntryPtr->numRegs + fgEntryPtr->numSlots);
-        if ((size > 1) || (fgEntryPtr->IsHfaArg() && argx->TypeGet() == TYP_STRUCT))
+        if (((size > 1) || (fgEntryPtr->IsHfaArg() && argx->TypeGet() == TYP_STRUCT))
+#ifdef UNIX_AMD64_ABI
+        && !varTypeIsSIMD(argx->TypeGet()) // TODO, understand if this is correct for Vector2/3
+#endif // UNIX_AMD64_ABI
+        )
         {
             foundStructArg = true;
             if (varTypeIsStruct(argx) && !argx->OperIs(GT_FIELD_LIST))

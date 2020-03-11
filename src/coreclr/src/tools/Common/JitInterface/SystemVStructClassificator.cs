@@ -256,7 +256,7 @@ namespace Internal.JitInterface
 
                         int vectorSize = instantiatedType.GetElementSize().AsInt;
                         
-                        if (instantiatedType.InstanceFieldSize <= SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES)
+                        if (vectorSize <= SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES)
                         {
                             // Vector64<T> does not attempt to follow the SysV abi, as we do not have any plan to support MMX
                             return false;
@@ -265,6 +265,8 @@ namespace Internal.JitInterface
                         // Either Vectors live alone in a struct, or they are unioned exactly.
                         if (helper.CurrentUniqueOffsetField == 0)
                         {
+                            helper.LargestFieldOffset = 0;
+
                             helper.FieldClassifications[helper.CurrentUniqueOffsetField] = SystemVClassificationTypeSSE;
                             helper.FieldSizes[helper.CurrentUniqueOffsetField] = SYSTEMV_EIGHT_BYTE_SIZE_IN_BYTES;
                             helper.FieldOffsets[helper.CurrentUniqueOffsetField] = 0;

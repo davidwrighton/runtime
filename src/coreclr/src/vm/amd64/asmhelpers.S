@@ -121,6 +121,7 @@ NESTED_ENTRY ProfileEnterNaked, _TEXT, NoHandler
   // save fp return registers
   movdqa                  [rax + 0x00], xmm0
   movdqa                  [rax + 0x10], xmm1
+// TODO Must save xmm0-xmm7
 
   END_PROLOGUE
 
@@ -206,7 +207,7 @@ NESTED_ENTRY ProfileLeaveNaked, _TEXT, NoHandler
   // save fp return registers
   movdqa                  [rax + 0x00], xmm0
   movdqa                  [rax + 0x10], xmm1
-
+   
   END_PROLOGUE
 
   // rdi already contains the clientInfo
@@ -309,3 +310,246 @@ NESTED_ENTRY ProfileTailcallNaked, _TEXT, NoHandler
 
   ret
 NESTED_END ProfileTailcallNaked, _TEXT
+
+// EXTERN_C void ProfileEnterNakedYMMSupport(FunctionIDOrClientID functionIDOrClientID, size_t profiledRsp);
+// <NOTE>
+//
+// </NOTE>
+NESTED_ENTRY ProfileEnterNakedYMMSupport, _TEXT, NoHandler
+  //       Upon entry :
+  //           r14 = clientInfo
+  //           r15 = profiledRsp
+
+  push_nonvol_reg         rax
+
+  lea                     rax, [rsp + 0x10]    // caller rsp
+  mov                     r10, [rax - 0x8]     // return address
+
+  push_argument_register  rdx
+  alloc_stack             SIZEOF_STACK_FRAME
+
+  // correctness of return value in structure doesn't matter for enter probe
+
+  // setup ProfilePlatformSpecificData structure
+  xor                     r11, r11 // nullify r11
+  mov                     [rsp +  0x0], r11    // r11 is null     -- struct functionId field
+  save_reg_postrsp        rbp, 0x8             //                 -- struct rbp field
+  mov                     [rsp + 0x10], rax    // caller rsp      -- struct probeRsp field
+  mov                     [rsp + 0x18], r10    // return address  -- struct ip field
+  mov                     [rsp + 0x20], r15    //                 -- struct profiledRsp field
+  mov                     [rsp + 0x28], r11    // return value    -- struct rax field
+  mov                     [rsp + 0x30], r11    // r11 is null     -- struct hiddenArg field
+  movsd                   real8 ptr [rsp + 0x38], xmm0    //      -- struct flt0 field
+  movsd                   real8 ptr [rsp + 0x40], xmm1    //      -- struct flt1 field
+  movsd                   real8 ptr [rsp + 0x48], xmm2    //      -- struct flt2 field
+  movsd                   real8 ptr [rsp + 0x50], xmm3    //      -- struct flt3 field
+  movsd                   real8 ptr [rsp + 0x58], xmm4    //      -- struct flt4 field
+  movsd                   real8 ptr [rsp + 0x60], xmm5    //      -- struct flt5 field
+  movsd                   real8 ptr [rsp + 0x68], xmm6    //      -- struct flt6 field
+  movsd                   real8 ptr [rsp + 0x70], xmm7    //      -- struct flt7 field
+  mov                     [rsp + 0x78], rdi               //      -- struct rdi field
+  mov                     [rsp + 0x80], rsi               //      -- struct rsi field
+  mov                     [rsp + 0x88], rdx               //      -- struct rdx field
+  mov                     [rsp + 0x90], rcx               //      -- struct rcx field
+  mov                     [rsp + 0x98], r8                //      -- struct r8 field
+  mov                     [rsp + 0xa0], r9                //      -- struct r9 field
+  mov                     r10, 0x1 // PROFILE_ENTER
+  mov                     [rsp + 0xa8], r10d              //      -- struct flags field
+
+  // get aligned stack ptr (rsp + FRAME_SIZE) & (-16)
+  lea                     rax, [rsp + 0xb8]
+  and                     rax, -16
+
+  // we need to be able to restore the fp return register
+  // save fp return registers
+  movdqa                  [rax + 0x00], xmm0 // TODO Use AVX here
+  movdqa                  [rax + 0x10], xmm1 // TODO Use AVX here
+   // TODO Must save ymm0-ymm7
+
+  END_PROLOGUE
+
+  // rdi already contains the clientInfo
+  mov                     rdi, r14
+  lea                     rsi, [rsp + 0x0]
+  call                    C_FUNC(ProfileEnter)
+
+  // restore fp return registers
+  lea                     rax, [rsp + 0xb8]
+  and                     rax, -16
+  movdqa                  xmm0, [rax + 0x00] // TODO Use AVX here
+  movdqa                  xmm1, [rax + 0x10] // TODO Use AVX here
+
+  // restore arg registers
+  mov                     rdi, [rsp + 0x78]
+  mov                     rsi, [rsp + 0x80]
+  mov                     rdx, [rsp + 0x88]
+  mov                     rcx, [rsp + 0x90]
+  mov                     r8, [rsp + 0x98]
+  mov                     r9, [rsp + 0xa0]
+
+  // begin epilogue
+  free_stack              SIZEOF_STACK_FRAME
+  pop_argument_register   rdx
+
+  pop_nonvol_reg          rax
+
+  ret
+NESTED_END ProfileEnterNakedYMMSupport, _TEXT
+
+// EXTERN_C void ProfileLeaveNakedYMMSupport(FunctionIDOrClientID functionIDOrClientID, size_t profiledRsp);
+// <NOTE>
+//
+// </NOTE>
+NESTED_ENTRY ProfileLeaveNakedYMMSupport, _TEXT, NoHandler
+//       Upon entry :
+//           rdi = clientInfo
+//           rsi = profiledRsp
+
+  push_nonvol_reg         rbx
+
+  lea                     rbx, [rsp + 0x10]    // caller rsp
+  mov                     r10, [rbx - 0x8]     // return address
+
+  // rdx should be saved here because it can be used for returning struct values
+  push_argument_register  rdx
+  alloc_stack             SIZEOF_STACK_FRAME
+
+  // correctness of argument registers in structure doesn't matter for leave probe
+
+  // setup ProfilePlatformSpecificData structure
+  xor                     r11, r11  // nullify r11
+  mov                     [rsp +  0x0], r11    // r11 is null     -- struct functionId field
+  save_reg_postrsp        rbp, 0x8             //                 -- struct rbp field
+  mov                     [rsp + 0x10], rbx    // caller rsp      -- struct probeRsp field
+  mov                     [rsp + 0x18], r10    // return address  -- struct ip field
+  mov                     [rsp + 0x20], rsi    //                 -- struct profiledRsp field
+  mov                     [rsp + 0x28], rax    // return value    -- struct rax field
+  mov                     [rsp + 0x30], r11    // r11 is null     -- struct hiddenArg field
+  movsd                   real8 ptr [rsp + 0x38], xmm0    //      -- struct flt0 field
+  movsd                   real8 ptr [rsp + 0x40], xmm1    //      -- struct flt1 field
+  movsd                   real8 ptr [rsp + 0x48], xmm2    //      -- struct flt2 field
+  movsd                   real8 ptr [rsp + 0x50], xmm3    //      -- struct flt3 field
+  movsd                   real8 ptr [rsp + 0x58], xmm4    //      -- struct flt4 field
+  movsd                   real8 ptr [rsp + 0x60], xmm5    //      -- struct flt5 field
+  movsd                   real8 ptr [rsp + 0x68], xmm6    //      -- struct flt6 field
+  movsd                   real8 ptr [rsp + 0x70], xmm7    //      -- struct flt7 field
+  mov                     [rsp + 0x78], r11     //                -- struct rdi field
+  mov                     [rsp + 0x80], r11     //                -- struct rsi field
+  mov                     [rsp + 0x88], r11     //                -- struct rdx field
+  mov                     [rsp + 0x90], r11     //                -- struct rcx field
+  mov                     [rsp + 0x98], r11     //                -- struct r8 field
+  mov                     [rsp + 0xa0], r11    //                -- struct r9 field
+  mov                     r10, 0x2  // PROFILE_LEAVE
+  mov                     [rsp + 0xa8], r10d   // flags           -- struct flags field
+
+  // get aligned stack ptr (rsp + FRAME_SIZE) & (-16)
+  lea                     rax, [rsp + 0xb8]
+  and                     rax, -16
+
+  // we need to be able to restore the fp return register
+  // save fp return registers
+  movdqa                  [rax + 0x00], xmm0 // TODO Use AVX here
+  movdqa                  [rax + 0x10], xmm1 // TODO Use AVX here
+
+  END_PROLOGUE
+
+  // rdi already contains the clientInfo
+  lea                     rsi, [rsp + 0x0]
+  call                    C_FUNC(ProfileLeave)
+
+  // restore fp return registers
+  lea                     rax, [rsp + 0xb8]
+  and                     rax, -16
+  movdqa                  xmm0, [rax + 0x00] // TODO Use AVX here
+  movdqa                  xmm1, [rax + 0x10] // TODO Use AVX here
+
+  // restore int return register
+  mov                     rax, [rsp + 0x28]
+
+  // begin epilogue
+  free_stack              SIZEOF_STACK_FRAME
+  pop_argument_register   rdx
+
+  pop_nonvol_reg          rbx
+
+  ret
+NESTED_END ProfileLeaveNakedYMMSupport, _TEXT
+
+// EXTERN_C void ProfileTailcallNakedYMMSupport(FunctionIDOrClientID functionIDOrClientID, size_t profiledRsp);
+// <NOTE>
+//
+// </NOTE>
+NESTED_ENTRY ProfileTailcallNakedYMMSupport, _TEXT, NoHandler
+//       Upon entry :
+//           rdi = clientInfo
+//           rsi = profiledRsp
+
+  push_nonvol_reg         rbx
+
+  lea                     rbx, [rsp + 0x10]    // caller rsp
+  mov                     r10, [rbx - 0x8]     // return address
+
+  // rdx should be saved here because it can be used for returning struct values
+  push_argument_register  rdx
+  alloc_stack             SIZEOF_STACK_FRAME
+
+  // correctness of argument registers in structure doesn't matter for tailcall probe
+
+  // setup ProfilePlatformSpecificData structure
+  xor                     r11, r11  // nullify r11
+  mov                     [rsp +  0x0], r11    // r11 is null     -- struct functionId field
+  save_reg_postrsp        rbp, 0x8             //                 -- struct rbp field
+  mov                     [rsp + 0x10], rbx    // caller rsp      -- struct probeRsp field
+  mov                     [rsp + 0x18], r10    // return address  -- struct ip field
+  mov                     [rsp + 0x20], rsi    //                 -- struct profiledRsp field
+  mov                     [rsp + 0x28], rax    // return value    -- struct rax field
+  mov                     [rsp + 0x30], r11    // r11 is null     -- struct hiddenArg field
+  movsd                   real8 ptr [rsp + 0x38], xmm0    //      -- struct flt0 field
+  movsd                   real8 ptr [rsp + 0x40], xmm1    //      -- struct flt1 field
+  movsd                   real8 ptr [rsp + 0x48], xmm2    //      -- struct flt2 field
+  movsd                   real8 ptr [rsp + 0x50], xmm3    //      -- struct flt3 field
+  movsd                   real8 ptr [rsp + 0x58], xmm4    //      -- struct flt4 field
+  movsd                   real8 ptr [rsp + 0x60], xmm5    //      -- struct flt5 field
+  movsd                   real8 ptr [rsp + 0x68], xmm6    //      -- struct flt6 field
+  movsd                   real8 ptr [rsp + 0x70], xmm7    //      -- struct flt7 field
+  mov                     [rsp + 0x78], r11     //                -- struct rdi field
+  mov                     [rsp + 0x80], r11     //                -- struct rsi field
+  mov                     [rsp + 0x88], r11     //                -- struct rdx field
+  mov                     [rsp + 0x90], r11     //                -- struct rcx field
+  mov                     [rsp + 0x98], r11     //                -- struct r8 field
+  mov                     [rsp + 0xa0], r11     //                -- struct r9 field
+  mov                     r10, 0x2  // PROFILE_LEAVE
+  mov                     [rsp + 0xa8], r10d   // flags           -- struct flags field
+
+  // get aligned stack ptr (rsp + FRAME_SIZE) & (-16)
+  lea                     rax, [rsp + 0xc0]
+  and                     rax, -16
+
+  // we need to be able to restore the fp return register
+  // save fp return registers
+  movdqa                  [rax + 0x00], xmm0 // TODO Use AVX here
+  movdqa                  [rax + 0x10], xmm1 // TODO Use AVX here
+
+  END_PROLOGUE
+
+  // rdi already contains the clientInfo
+  lea                     rsi, [rsp + 0x0]
+  call                    C_FUNC(ProfileTailcall)
+
+  // restore fp return registers
+  lea                     rax, [rsp + 0xc0]
+  and                     rax, -16
+  movdqa                  xmm0, [rax + 0x00] // TODO Use AVX here
+  movdqa                  xmm1, [rax + 0x10] // TODO Use AVX here
+
+  // restore int return register
+  mov                     rax, [rsp + 0x28]
+
+  // begin epilogue
+  free_stack              SIZEOF_STACK_FRAME
+  pop_argument_register   rdx
+
+  pop_nonvol_reg          rbx
+
+  ret
+NESTED_END ProfileTailcallNakedYMMSupport, _TEXT

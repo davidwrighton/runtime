@@ -761,6 +761,10 @@ void Compiler::lvaInitUserArgs(InitVarDscInfo* varDscInfo)
                     {
                         floatRegCount++;
                     }
+                    else if (structDesc.IsSseUpSlot(i))
+                    {
+                        // Do nothing, these slots are always paired with a Sse slot that takes the register
+                    }
                     else
                     {
                         assert(false && "Invalid eightbyte classification type.");
@@ -863,12 +867,14 @@ void Compiler::lvaInitUserArgs(InitVarDscInfo* varDscInfo)
                 // If there is a second eightbyte, get a register for it too and map the arg to the reg number.
                 if (structDesc.eightByteCount >= 2)
                 {
+                    // This may return TYP_UNDER if the eightByte is SSEUp
+                    // and the register allocated by the code for first eightByte.
                     secondEightByteType      = GetEightByteType(structDesc, 1);
-                    secondAllocatedRegArgNum = varDscInfo->allocRegArg(secondEightByteType, 1);
                 }
 
                 if (secondEightByteType != TYP_UNDEF)
                 {
+                    secondAllocatedRegArgNum = varDscInfo->allocRegArg(secondEightByteType, 1);
                     varDsc->SetOtherArgReg(genMapRegArgNumToRegNum(secondAllocatedRegArgNum, secondEightByteType));
                 }
             }

@@ -3429,6 +3429,9 @@ void CodeGen::genFnPrologCalleeRegArgs(regNumber xtraReg, bool* pXtraRegClobbere
             unsigned firstRegSlot = 0;
             for (unsigned slotCounter = 0; slotCounter < structDesc.eightByteCount; slotCounter++)
             {
+                if (structDesc.IsSseUpSlot(slotCounter))
+                    continue; // SSEUp slots are handled by the first eightByteCount
+
                 regNumber regNum = varDsc->lvRegNumForSlot(slotCounter);
                 var_types regType;
 

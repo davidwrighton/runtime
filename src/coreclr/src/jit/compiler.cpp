@@ -708,7 +708,7 @@ var_types Compiler::getArgTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
         // We can't pass this as a primitive type unless it is a SIMD type.
         if (structDesc.eightByteClassifications[1] == SystemVClassificationTypeSSEUp)
         {
-            useType = GetEightByteType(structDesc, 1);
+            useType = GetEightByteType(structDesc, 0);
         }
     }
     else if (structDesc.eightByteClassifications[0] == SystemVClassificationTypeSSE)
@@ -956,7 +956,7 @@ var_types Compiler::getReturnTypeForStruct(CORINFO_CLASS_HANDLE clsHnd,
         canReturnInRegister = structDesc.passedInRegisters;
         if (structDesc.eightByteClassifications[1] == SystemVClassificationTypeSSEUp)
         {
-            useType           = GetEightByteType(structDesc, 1);
+            useType           = GetEightByteType(structDesc, 0);
             howToReturnStruct = SPK_PrimitiveType;
         }
     }
@@ -6977,7 +6977,29 @@ var_types Compiler::GetEightByteType(const SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASS
             }
             else if (structDesc.eightByteSizes[slotNum] <= 8)
             {
-                eightByteType = TYP_DOUBLE;
+                if ((slotNum == 0) && structDesc.eightByteCount == 2 && structDesc.eightByteClassifications[1] == SystemVClassificationTypeSSEUp)
+                {
+                    // SIMD case
+                    // For a SIMD register, the representation used is
+                    // that the eightByte for the SSEUp actually can have a size > 8, and represents a
+                    // series of eightbytes that are all SSEUp.
+                    if (structDesc.eightByteSizes[1] == 8)
+                    {
+                        eightByteType = TYP_SIMD16;
+                    }
+                    else if (structDesc.eightByteSizes[1] == 24)
+                    {
+                        eightByteType = TYP_SIMD32;
+                    }
+                    else
+                    {
+                        assert(false && "GetEightByteType Invalid SSE classification type.");
+                    }
+                }
+                else
+                {
+                    eightByteType = TYP_DOUBLE;
+                }
             }
             else
             {
@@ -6985,18 +7007,9 @@ var_types Compiler::GetEightByteType(const SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASS
             }
             break;
         case SystemVClassificationTypeSSEUp:
-            if (structDesc.eightByteSizes[slotNum] == 8)
-            {
-                eightByteType = TYP_SIMD16;
-                break;
-            }
-            else (structDesc.eightByteSizes[slotNum] == 24)
-            {
-                eightByteType = TYP_SIMD32;
-                break;
-            }
+            eightByteType = TYP_UNDEF;
+            break;
 
-            /* Fall through, as this isn't a known vector type */
         default:
             assert(false && "GetEightByteType Invalid classification type.");
             break;

@@ -1562,6 +1562,12 @@ void CodeGen::psiBegProlog()
                     {
                         var_types regType = TYP_UNDEF;
 
+                        regType = compiler->GetEightByteType(structDesc, nCnt);
+
+                        // SSEUp classification type should be ignored
+                        if (regType == TYP_UNDEF)
+                            continue;
+
                         if (nCnt == 0)
                         {
                             regNum = lclVarDsc->GetArgReg();
@@ -1574,8 +1580,6 @@ void CodeGen::psiBegProlog()
                         {
                             assert(false && "Invalid eightbyte number.");
                         }
-
-                        regType = compiler->GetEightByteType(structDesc, nCnt);
 #ifdef DEBUG
                         regType = compiler->mangleVarArgsType(regType);
                         assert(genMapRegNumToRegArgNum((nCnt == 0 ? regNum : otherRegNum), regType) != (unsigned)-1);

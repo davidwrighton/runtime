@@ -153,18 +153,34 @@ NESTED_ENTRY JIT_RareDisableHelper, _TEXT, NoHandler
     push_register rax
     // Second integer return register
     push_register rdx
-    alloc_stack         0x28
+    alloc_stack         0x38
     END_PROLOGUE
-    // First float return register
-    movdqa              xmmword ptr [rsp], xmm0
     // Second float return register
-    movdqa              xmmword ptr [rsp+0x10], xmm1
+    movdqa              xmmword ptr [rsp+0x20], xmm1
+
+    cmp                 [g_xmmYmmStateSupport], 0
+    jne                 SaveXMM
+    vmovdqu             ymmword ptr [rsp], ymm0
+    jmp                 CallCFunc_JIT_RareDisableHelperWorker
+SaveXMM:
+    // First float return register
+    movdqa              xmmword ptr [rsp], xmm0 // needs YMM variant
+CallCFunc_JIT_RareDisableHelperWorker:
 
     call                C_FUNC(JIT_RareDisableHelperWorker)
 
+    cmp                 [g_xmmYmmStateSupport], 0
+    jne                 RestoreXMM
+    vmovdqu             ymm0, ymmword ptr [rsp]
+    jmp                 RestoreNonYmmRegistersInRareDisableHelper
+RestoreXMM:
+    // First float return register
     movdqa              xmm0, xmmword ptr [rsp]
-    movdqa              xmm1, xmmword ptr [rsp+0x10]
-    free_stack          0x28
+RestoreNonYmmRegistersInRareDisableHelper:
+
+    movdqa              xmm0, xmmword ptr [rsp]
+    movdqa              xmm1, xmmword ptr [rsp+0x20]
+    free_stack          0x38
     pop_register        rdx
     pop_register        rax
     ret
@@ -210,6 +226,45 @@ NESTED_ENTRY OnHijackTripThread, _TEXT, NoHandler
     ret
 
 NESTED_END OnHijackTripThread, _TEXT
+
+
+//------------------------------------------------
+// OnHijackTripThreadYMMSupport
+//
+NESTED_ENTRY OnHijackTripThreadYMMSupport, _TEXT, NoHandler
+
+    // Make room for the real return address (rip)
+    push_register rax
+
+    PUSH_CALLEE_SAVED_REGISTERS
+
+    push_register rdx
+    // Push rax again - this is where integer/pointer return values are returned
+    push_register rax
+
+    mov                 rdi, rsp
+
+    alloc_stack         0x38
+
+    // First float return register
+    vmovdqu             [rsp], ymm0
+    // Second float return register
+    movdqa              [rsp+0x20], xmm1
+
+    END_PROLOGUE
+
+    call                C_FUNC(OnHijackWorker)
+
+    vmovdqu             ymm0, [rsp] // TODO Actually use YMM register
+    movdqa              xmm1, [rsp+0x20]
+    free_stack          0x38
+    pop_register        rax
+    pop_register        rdx
+
+    POP_CALLEE_SAVED_REGISTERS
+    ret
+
+NESTED_END OnHijackTripThreadYMMSupport, _TEXT
 
 #endif // FEATURE_HIJACK
 

@@ -323,6 +323,24 @@ struct SYSTEMV_AMD64_CORINFO_STRUCT_REG_PASSING_DESCRIPTOR
         return (eightByteClassifications[slotIndex] == SystemVClassificationTypeSSE);
     }
 
+    //------------------------------------------------------------------------
+    // IsSseUpSlot: Returns whether the eightbyte at slotIndex is SSEUp type.
+    //
+    // Arguments:
+    //    'slotIndex' the slot number we are determining if it is of SSEUp type.
+    //
+    // Return value:
+    //     returns true if we the eightbyte at index slotIndex is of SSEUp type.
+    //
+    // Follows the rules of the AMD64 System V ABI specification at https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf.
+    // Please refer to it for definitions/examples. In this implementation a single SSEUp eight-byte
+    // is used with the size field to represent an arbitrary string of SSEUp eight-bytes as defined in the spec.
+    //
+    bool IsSseUpSlot(unsigned slotIndex) const
+    {
+        return (eightByteClassifications[slotIndex] == SystemVClassificationTypeSSEUp);
+    }
+
 private:
     void Initialize()
     {

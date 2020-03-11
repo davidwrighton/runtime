@@ -281,8 +281,8 @@ inline bool varTypeUsesFloatReg(T vt)
 template <class T>
 inline bool varTypeUsesFloatArgReg(T vt)
 {
-#ifdef TARGET_ARM64
-    // Arm64 passes SIMD types in floating point registers.
+#if defined(TARGET_ARM64) || defined(UNIX_AMD64_ABI)
+    // Arm64 and Unix SysV passes SIMD types in floating point registers.
     return varTypeUsesFloatReg(vt);
 #else
     // Other targets pass them as regular structs - by reference or by value.
