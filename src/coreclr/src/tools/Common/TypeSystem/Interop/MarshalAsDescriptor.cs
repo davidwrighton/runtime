@@ -40,7 +40,7 @@ namespace Internal.TypeSystem
         Variant = 0x51,
     }
 
-    public class MarshalAsDescriptor
+    public class MarshalAsDescriptor: IEquatable<MarshalAsDescriptor>
     {
         public NativeTypeKind Type { get; }
         public NativeTypeKind ArraySubType { get; }
@@ -53,6 +53,31 @@ namespace Internal.TypeSystem
             ArraySubType = arraySubType;
             SizeParamIndex = sizeParamIndex;
             SizeConst = sizeConst;
+        }
+
+        public bool Equals(MarshalAsDescriptor other)
+        {
+            if ((Type != other.Type) ||
+                (ArraySubType != other.ArraySubType) ||
+                (SizeParamIndex != other.SizeParamIndex) ||
+                (SizeConst != other.SizeConst))
+                return false;
+
+            return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (obj is MarshalAsDescriptor other)
+            {
+                return Equals(other);
+            }
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            return Type.GetHashCode() ^ (ArraySubType.GetHashCode() << 3);
         }
     }
 }

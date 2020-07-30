@@ -329,7 +329,7 @@ namespace ILCompiler
                 bDepth--;
             }
 
-            while (ta != tb)
+            while (!ta.IsEquivalentTo(tb))
             {
                 ta = ta.BaseType;
                 tb = tb.BaseType;
@@ -347,9 +347,23 @@ namespace ILCompiler
             Debug.Assert(ta.IsArray && tb.IsArray && ta != tb);
 
             // if no match on the rank the common ancestor is System.Array
-            if (ta.IsSzArray != tb.IsSzArray || ta.Rank != tb.Rank)
+            if (ta.Rank != tb.Rank)
             {
                 return ta.Context.GetWellKnownType(WellKnownType.Array);
+            }
+
+            bool forceMDArrayRank1Type = false;
+
+            if (ta.IsSzArray != tb.IsSzArray)
+            {
+                if (ta.Rank == 1)
+                {
+                    forceMDArrayRank1Type = true;
+                }
+                else
+                {
+                    return ta.Context.GetWellKnownType(WellKnownType.Array);
+                }
             }
 
             TypeDesc taElem = ta.ElementType;
@@ -357,7 +371,11 @@ namespace ILCompiler
             Debug.Assert(taElem != tbElem);
 
             TypeDesc mergeElem;
-            if (taElem.IsArray && tbElem.IsArray)
+            if (taElem.IsEquivalentTo(tbElem))
+            {
+                mergeElem = taElem;
+            }
+            else if (taElem.IsArray && tbElem.IsArray)
             {
                 mergeElem = MergeArrayTypesToCommonParent((ArrayType)taElem, (ArrayType)tbElem);
             }
@@ -370,6 +388,11 @@ namespace ILCompiler
             {
                 // The element types have nothing in common.
                 return ta.Context.GetWellKnownType(WellKnownType.Array);
+            }
+
+            if (forceMDArrayRank1Type)
+            {
+                return mergeElem.MakeArrayType(1);
             }
 
             if (mergeElem == taElem)

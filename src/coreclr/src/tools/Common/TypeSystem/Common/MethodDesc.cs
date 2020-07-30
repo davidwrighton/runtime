@@ -173,15 +173,20 @@ namespace Internal.TypeSystem
 
         public bool Equals(MethodSignature otherSignature)
         {
-            return Equals(otherSignature, allowCovariantReturn: false);
+            return Equals(otherSignature, allowCovariantReturn: false, allowEquivalence: false);
         }
 
         public bool EqualsWithCovariantReturnType(MethodSignature otherSignature)
         {
-            return Equals(otherSignature, allowCovariantReturn: true);
+            return Equals(otherSignature, allowCovariantReturn: true, allowEquivalence: false);
         }
 
-        private bool Equals(MethodSignature otherSignature, bool allowCovariantReturn)
+        public bool EquivalentTo(MethodSignature otherSignature, StackOverflowProtect visited = null)
+        {
+            return Equals(otherSignature, allowCovariantReturn: false, allowEquivalence: true);
+        }
+
+        private bool Equals(MethodSignature otherSignature, bool allowCovariantReturn, bool allowEquivalence, StackOverflowProtect visited = null)
         {
             // TODO: Generics, etc.
             if (this._flags != otherSignature._flags)
@@ -190,12 +195,12 @@ namespace Internal.TypeSystem
             if (this._genericParameterCount != otherSignature._genericParameterCount)
                 return false;
 
-            if (this._returnType != otherSignature._returnType)
+            if (!CompareTypeHelper(this._returnType, otherSignature._returnType, allowEquivalence, visited))
             {
                 if (!allowCovariantReturn)
                     return false;
 
-                if (!otherSignature._returnType.IsCompatibleWith(this._returnType))
+                if (!otherSignature._returnType.IsCompatibleWith(this._returnType, visited))
                     return false;
             }
 
@@ -204,7 +209,7 @@ namespace Internal.TypeSystem
 
             for (int i = 0; i < this._parameters.Length; i++)
             {
-                if (this._parameters[i] != otherSignature._parameters[i])
+                if (!CompareTypeHelper(this._parameters[i], otherSignature._parameters[i], allowEquivalence, visited))
                     return false;
             }
 
@@ -226,7 +231,7 @@ namespace Internal.TypeSystem
                         return false;
                     if (this._embeddedSignatureData[i].kind != otherSignature._embeddedSignatureData[i].kind)
                         return false;
-                    if (this._embeddedSignatureData[i].type != otherSignature._embeddedSignatureData[i].type)
+                    if (!CompareTypeHelper(this._embeddedSignatureData[i].type, otherSignature._embeddedSignatureData[i].type, allowEquivalence, visited))
                         return false;
                 }
 
@@ -234,6 +239,21 @@ namespace Internal.TypeSystem
             }
 
             return false;
+
+            static bool CompareTypeHelper(TypeDesc type1, TypeDesc type2, bool allowEquivalence, StackOverflowProtect visited)
+            {
+                if (type1 == type2)
+                    return true;
+
+                if (allowEquivalence)
+                {
+                    if (type1.IsEquivalentTo(type2, visited))
+                    {
+                        return true;
+                    }
+                }
+                return false;
+            }
         }
 
         public override bool Equals(object obj)
