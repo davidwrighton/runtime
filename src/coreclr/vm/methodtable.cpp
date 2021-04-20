@@ -9176,6 +9176,7 @@ MethodDesc *
 MethodTable::ResolveVirtualStaticMethod(MethodDesc* pInterfaceMD)
 {
     // TODO
+    COMPlusThrow(kTypeLoadException, E_NOTIMPL);
 }
 
 //==========================================================================================

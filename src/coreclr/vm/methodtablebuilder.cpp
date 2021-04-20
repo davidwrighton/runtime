@@ -5030,7 +5030,9 @@ MethodTableBuilder::ValidateMethods()
         if (it.IsMethodImpl())
         {
             if (!IsMdVirtual(it.Attrs()) && !IsMdStatic(it.Attrs()))
-            {   // Non-virtual methods cannot participate in a methodImpl pair.
+            {
+                // Non-virtual methods may only participate in a methodImpl pair when
+                // they are static and they implement a virtual static interface method.
                 BuildMethodTableThrowException(IDS_CLASSLOAD_MI_MUSTBEVIRTUAL, it.Token());
             }
         }
@@ -6269,59 +6271,60 @@ MethodTableBuilder::PlaceMethodImpls()
         // Get the declaration part of the method impl. It will either be a token
         // (declaration is on this type) or a method desc.
         bmtMethodHandle hDeclMethod = bmtMethodImpl->GetDeclarationMethod(iEntry);
-        if(hDeclMethod.IsMDMethod())
+
+        // Don't place static virtual method overrides in the vtable
+        if (!IsMdStatic(hDeclMethod.GetDeclAttrs()))
         {
-            // The declaration is on the type being built
-            bmtMDMethod * pCurDeclMethod = hDeclMethod.AsMDMethod();
-
-            mdToken mdef = pCurDeclMethod->GetMethodSignature().GetToken();
-            if (bmtMethodImpl->IsBody(mdef))
-            {   // A method declared on this class cannot be both a decl and an impl
-                BuildMethodTableThrowException(IDS_CLASSLOAD_MI_MULTIPLEOVERRIDES, mdef);
-            }
-
-            if (IsInterface())
+            if(hDeclMethod.IsMDMethod())
             {
-                // Throws
-                PlaceInterfaceDeclarationOnInterface(
-                    hDeclMethod,
-                    pCurImplMethod,
-                    slots,              // Adds override to the slot and replaced arrays.
-                    replaced,
-                    &slotIndex,
-                    dwMaxSlotSize);     // Increments count
+                // The declaration is on the type being built
+                bmtMDMethod * pCurDeclMethod = hDeclMethod.AsMDMethod();
+    
+                mdToken mdef = pCurDeclMethod->GetMethodSignature().GetToken();
+                if (bmtMethodImpl->IsBody(mdef))
+                {   // A method declared on this class cannot be both a decl and an impl
+                    BuildMethodTableThrowException(IDS_CLASSLOAD_MI_MULTIPLEOVERRIDES, mdef);
+                }
+    
+                if (IsInterface())
+                {
+                    // Throws
+                    PlaceInterfaceDeclarationOnInterface(
+                        hDeclMethod,
+                        pCurImplMethod,
+                        slots,              // Adds override to the slot and replaced arrays.
+                        replaced,
+                        &slotIndex,
+                        dwMaxSlotSize);     // Increments count
+                }
+                else
+                {
+                    // Throws
+                    PlaceLocalDeclarationOnClass(
+                        pCurDeclMethod,
+                        pCurImplMethod,
+                        slots,              // Adds override to the slot and replaced arrays.
+                        replaced,
+                        &slotIndex,
+                        dwMaxSlotSize);     // Increments count
+                }
             }
             else
             {
-                // Throws
-                PlaceLocalDeclarationOnClass(
-                    pCurDeclMethod,
-                    pCurImplMethod,
-                    slots,              // Adds override to the slot and replaced arrays.
-                    replaced,
-                    &slotIndex,
-                    dwMaxSlotSize);     // Increments count
-            }
-        }
-        else
-        {
-            bmtRTMethod * pCurDeclMethod = hDeclMethod.AsRTMethod();
-
-            if (IsInterface())
-            {
-                // Throws
-                PlaceInterfaceDeclarationOnInterface(
-                    hDeclMethod,
-                    pCurImplMethod,
-                    slots,              // Adds override to the slot and replaced arrays.
-                    replaced,
-                    &slotIndex,
-                    dwMaxSlotSize);     // Increments count
-            }
-            else
-            {
-                // Don't place static virtual method overrides in the vtable
-                if (!IsMdStatic(pCurDeclMethod->GetDeclAttrs()))
+                bmtRTMethod * pCurDeclMethod = hDeclMethod.AsRTMethod();
+    
+                if (IsInterface())
+                {
+                    // Throws
+                    PlaceInterfaceDeclarationOnInterface(
+                        hDeclMethod,
+                        pCurImplMethod,
+                        slots,              // Adds override to the slot and replaced arrays.
+                        replaced,
+                        &slotIndex,
+                        dwMaxSlotSize);     // Increments count
+                }
+                else
                 {
                     // Do not use pDecl->IsInterface here as that asks the method table and the MT may not yet be set up.
                     if (pCurDeclMethod->GetOwningType()->IsInterface())
