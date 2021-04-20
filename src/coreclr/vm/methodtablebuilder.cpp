@@ -1180,17 +1180,17 @@ MethodTableBuilder::bmtInterfaceEntry::CreateSlotTable(
 
     CONSISTENCY_CHECK(m_pImplTable == NULL);
 
-    MethodTable *interfaceMT = GetInterfaceType()->GetMethodTable();
-    SLOT_INDEX cSlots = interfaceMT->GetNumVirtuals();
-    if (interfaceMT->HasVirtualStaticMethods())
-    {
-        cSlots += interfaceMT->GetNumNonVirtualSlots();
-    }
+    SLOT_INDEX cSlots = (SLOT_INDEX)GetInterfaceType()->GetMethodTable()->GetNumVirtuals();
     bmtInterfaceSlotImpl * pST = new (pStackingAllocator) bmtInterfaceSlotImpl[cSlots];
 
     MethodTable::MethodIterator it(GetInterfaceType()->GetMethodTable());
-    for (; m_cImplTable < cSlots; it.Next())
+    for (; it.IsValid(); it.Next())
     {
+        if (!it.IsVirtual())
+        {
+            break;
+        }
+
         bmtRTMethod * pCurMethod = new (pStackingAllocator)
             bmtRTMethod(GetInterfaceType(), it.GetDeclMethodDesc());
 
@@ -5628,6 +5628,7 @@ MethodTableBuilder::ProcessMethodImpls()
             // Non-virtual methods can only be classified as methodImpl when implementing
             // static virtual methods.
             CONSISTENCY_CHECK(IsMdStatic(it.Attrs()));
+            continue;
         }
 
         // If this method serves as the BODY of a MethodImpl specification, then
