@@ -1180,17 +1180,17 @@ MethodTableBuilder::bmtInterfaceEntry::CreateSlotTable(
 
     CONSISTENCY_CHECK(m_pImplTable == NULL);
 
-    SLOT_INDEX cSlots = (SLOT_INDEX)GetInterfaceType()->GetMethodTable()->GetNumVirtuals();
+    MethodTable *interfaceMT = GetInterfaceType()->GetMethodTable();
+    SLOT_INDEX cSlots = interfaceMT->GetNumVirtuals();
+    if (interfaceMT->HasVirtualStaticMethods())
+    {
+        cSlots += interfaceMT->GetNumNonVirtualSlots();
+    }
     bmtInterfaceSlotImpl * pST = new (pStackingAllocator) bmtInterfaceSlotImpl[cSlots];
 
     MethodTable::MethodIterator it(GetInterfaceType()->GetMethodTable());
-    for (; it.IsValid(); it.Next())
+    for (; m_cImplTable < cSlots; it.Next())
     {
-        if (!it.IsVirtual())
-        {
-            break;
-        }
-
         bmtRTMethod * pCurMethod = new (pStackingAllocator)
             bmtRTMethod(GetInterfaceType(), it.GetDeclMethodDesc());
 
@@ -2945,7 +2945,15 @@ MethodTableBuilder::EnumerateClassMethods()
                 }
                 if(IsMdStatic(dwMemberAttrs))
                 {
-                    BuildMethodTableThrowException(BFA_VIRTUAL_STATIC_METHOD);
+                    if (fIsClassInterface)
+                    {
+                        bmtProp->fHasVirtualStaticMethods = TRUE;
+                    }
+                    else
+                    {
+                        // Static virtual methods are only allowed to exist in interfaces
+                        BuildMethodTableThrowException(BFA_VIRTUAL_STATIC_METHOD);
+                    }
                 }
                 if(strMethodName && (0==strcmp(strMethodName, COR_CTOR_METHOD_NAME)))
                 {
@@ -5021,14 +5029,14 @@ MethodTableBuilder::ValidateMethods()
 
         if (it.IsMethodImpl())
         {
-            if (!IsMdVirtual(it.Attrs()))
+            if (!IsMdVirtual(it.Attrs()) && !IsMdStatic(it.Attrs()))
             {   // Non-virtual methods cannot participate in a methodImpl pair.
                 BuildMethodTableThrowException(IDS_CLASSLOAD_MI_MUSTBEVIRTUAL, it.Token());
             }
         }
 
         // Virtual static methods are not allowed.
-        if (IsMdStatic(it.Attrs()) && IsMdVirtual(it.Attrs()))
+        if (IsMdStatic(it.Attrs()) && IsMdVirtual(it.Attrs()) && !IsInterface())
         {
             BuildMethodTableThrowException(IDS_CLASSLOAD_STATICVIRTUAL, it.Token());
         }
@@ -5297,8 +5305,8 @@ MethodTableBuilder::PlaceVirtualMethods()
     DeclaredMethodIterator it(*this);
     while (it.Next())
     {
-        if (!IsMdVirtual(it.Attrs()))
-        {   // Only processing declared virtual methods
+        if (!IsMdVirtual(it.Attrs()) || IsMdStatic(it.Attrs()))
+        {   // Only processing declared virtual instance methods
             continue;
         }
 
@@ -5613,13 +5621,11 @@ MethodTableBuilder::ProcessMethodImpls()
     DeclaredMethodIterator it(*this);
     while (it.Next())
     {
-        // Non-virtual methods cannot be classified as methodImpl - we should have thrown an
-        // error before reaching this point.
-        CONSISTENCY_CHECK(!(!IsMdVirtual(it.Attrs()) && it.IsMethodImpl()));
-
-        if (!IsMdVirtual(it.Attrs()))
-        {   // Only virtual methods can participate in methodImpls
-            continue;
+        if (!IsMdVirtual(it.Attrs()) && it.IsMethodImpl())
+        {
+            // Non-virtual methods can only be classified as methodImpl when implementing
+            // static virtual methods.
+            CONSISTENCY_CHECK(IsMdStatic(it.Attrs()));
         }
 
         // If this method serves as the BODY of a MethodImpl specification, then
@@ -6314,24 +6320,28 @@ MethodTableBuilder::PlaceMethodImpls()
             }
             else
             {
-                // Do not use pDecl->IsInterface here as that asks the method table and the MT may not yet be set up.
-                if (pCurDeclMethod->GetOwningType()->IsInterface())
+                // Don't place static virtual method overrides in the vtable
+                if (!IsMdStatic(pCurDeclMethod->GetDeclAttrs()))
                 {
-                    // Throws
-                    PlaceInterfaceDeclarationOnClass(
-                        pCurDeclMethod,
-                        pCurImplMethod);
-                }
-                else
-                {
-                    // Throws
-                    PlaceParentDeclarationOnClass(
-                        pCurDeclMethod,
-                        pCurImplMethod,
-                        slots,
-                        replaced,
-                        &slotIndex,
-                        dwMaxSlotSize);        // Increments count
+                    // Do not use pDecl->IsInterface here as that asks the method table and the MT may not yet be set up.
+                    if (pCurDeclMethod->GetOwningType()->IsInterface())
+                    {
+                        // Throws
+                        PlaceInterfaceDeclarationOnClass(
+                            pCurDeclMethod,
+                            pCurImplMethod);
+                    }
+                    else
+                    {
+                        // Throws
+                        PlaceParentDeclarationOnClass(
+                            pCurDeclMethod,
+                            pCurImplMethod,
+                            slots,
+                            replaced,
+                            &slotIndex,
+                            dwMaxSlotSize);        // Increments count
+                    }
                 }
             }
         }
@@ -9783,7 +9793,8 @@ MethodTable * MethodTableBuilder::AllocateNewMT(
     LoaderAllocator *pAllocator,
     BOOL isInterface,
     BOOL fDynamicStatics,
-    BOOL fHasGenericsStaticsInfo
+    BOOL fHasGenericsStaticsInfo,
+    BOOL fHasVirtualStaticMethods
 #ifdef FEATURE_COMINTEROP
         , BOOL fHasDynamicInterfaceMap
 #endif
@@ -9926,6 +9937,10 @@ MethodTable * MethodTableBuilder::AllocateNewMT(
 
     // initialize the total number of slots
     pMT->SetNumVirtuals(static_cast<WORD>(dwVirtuals));
+    if (fHasVirtualStaticMethods)
+    {
+        pMT->SetHasVirtualStaticMethods();
+    }
 
     pMT->SetParentMethodTable(pMTParent);
 
@@ -10103,6 +10118,7 @@ MethodTableBuilder::SetupMethodTable2(
                                    IsInterface(),
                                    bmtProp->fDynamicStatics,
                                    bmtProp->fGenericsStatics,
+                                   bmtProp->fHasVirtualStaticMethods,
 #ifdef FEATURE_COMINTEROP
                                    fHasDynamicInterfaceMap,
 #endif
