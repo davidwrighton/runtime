@@ -2395,6 +2395,10 @@ public:
     // when it comes to dispatching pItfMT methods.
     BOOL HasSameInterfaceImplementationAsParent(MethodTable *pItfMT, MethodTable *pParentMT);
 
+    // Try to resolve a given static virtual method override on this type. Return nullptr
+    // when not found.
+    MethodDesc *TryResolveVirtualStaticMethodOnThisType(MethodDesc* pInterfaceMD);
+
 public:
     static MethodDesc *MapMethodDeclToMethodImpl(MethodDesc *pMDDecl);
 
