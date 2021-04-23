@@ -9173,11 +9173,11 @@ MethodDesc *MethodTable::GetDefaultConstructor(BOOL forceBoxedEntryPoint /* = FA
 //==========================================================================================
 // Finds the (non-unboxing) MethodDesc that implements the interface virtual static method pInterfaceMD.
 MethodDesc *
-MethodTable::ResolveVirtualStaticMethod(MethodDesc* pInterfaceMD)
+MethodTable::ResolveVirtualStaticMethod(MethodDesc* pInterfaceMD, BOOL allowInstParam)
 {
     for (MethodTable* pMT = this; pMT != nullptr; pMT = pMT->GetParentMethodTable())
     {
-        MethodDesc* pMD = pMT->TryResolveVirtualStaticMethodOnThisType(pInterfaceMD);
+        MethodDesc* pMD = pMT->TryResolveVirtualStaticMethodOnThisType(pInterfaceMD, allowInstParam);
         if (pMD != nullptr)
         {
             return pMD;
@@ -9190,7 +9190,7 @@ MethodTable::ResolveVirtualStaticMethod(MethodDesc* pInterfaceMD)
 // Try to locate the appropriate MethodImpl matching a given interface static virtual method.
 // Returns nullptr on failure.
 MethodDesc*
-MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodDesc* pInterfaceMD)
+MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodDesc* pInterfaceMD, BOOL allowInstParam)
 {
     HRESULT hr = S_OK;
     IMDInternalImport* pMDInternalImport = GetMDImport();
@@ -9263,7 +9263,7 @@ MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodDesc* pInterfaceMD)
 
         if (pInterfaceMD->HasMethodInstantiation() || pMethodImpl->HasMethodInstantiation() || HasInstantiation())
         {
-            return pMethodImpl->FindOrCreateAssociatedMethodDesc(pMethodImpl, this, FALSE, pInterfaceMD->GetMethodInstantiation(), TRUE);
+            return pMethodImpl->FindOrCreateAssociatedMethodDesc(pMethodImpl, this, FALSE, pInterfaceMD->GetMethodInstantiation(), allowInstParam);
         }
         else
         {
@@ -9286,6 +9286,7 @@ MethodDesc *
 MethodTable::TryResolveConstraintMethodApprox(
     TypeHandle   thInterfaceType,
     MethodDesc * pInterfaceMD,
+    BOOL         allowInstParam,
     BOOL *       pfForceUseRuntimeLookup)   // = NULL
 {
     CONTRACTL {
@@ -9295,7 +9296,7 @@ MethodTable::TryResolveConstraintMethodApprox(
 
     if (pInterfaceMD->IsStatic())
     {
-        return ResolveVirtualStaticMethod(pInterfaceMD);
+        return ResolveVirtualStaticMethod(pInterfaceMD, allowInstParam);
     }
 
     // We can't resolve constraint calls effectively for reference types, and there's
