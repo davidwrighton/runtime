@@ -2114,9 +2114,9 @@ BOOL MethodTableBuilder::IsEligibleForCovariantReturns(mdToken methodDeclToken)
 
     //
     // Note on covariant return types: right now we only support covariant returns for MethodImpls on
-    // classes, where the MethodDecl is also on a class. Interface methods are not supported.
-    // We will also allow covariant return types if both the MethodImpl and MethodDecl are not on the same type.
-    //
+    // classes, where the MethodDecl is also on a class. Interface methods are not supported except for static
+    // virtual methods. We will also allow covariant return types if both the MethodImpl and MethodDecl
+    // are not on the same type.
 
     HRESULT hr = S_OK;
     IMDInternalImport* pMDInternalImport = GetMDImport();
@@ -2181,7 +2181,21 @@ BOOL MethodTableBuilder::IsEligibleForCovariantReturns(mdToken methodDeclToken)
     if (FAILED(hr))
         BuildMethodTableThrowException(hr, *bmtError);
 
-    return !IsTdInterface(attr);
+    if (!IsTdInterface(attr))
+    {
+        return TRUE;
+    }
+
+    hr = pMDInternalImport->GetMethodDefProps(methodDeclToken, &attr);
+    if (FAILED(hr))
+        BuildMethodTableThrowException(hr, *bmtError);
+
+    if (IsMdStatic(attr))
+    {
+        return TRUE;
+    }
+
+    return FALSE;
 }
 
 //*******************************************************************************
