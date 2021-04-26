@@ -9173,7 +9173,7 @@ MethodDesc *MethodTable::GetDefaultConstructor(BOOL forceBoxedEntryPoint /* = FA
 //==========================================================================================
 // Finds the (non-unboxing) MethodDesc that implements the interface virtual static method pInterfaceMD.
 MethodDesc *
-MethodTable::ResolveVirtualStaticMethod(MethodDesc* pInterfaceMD, BOOL allowInstParam)
+MethodTable::ResolveVirtualStaticMethod(MethodDesc* pInterfaceMD, BOOL allowInstParam, BOOL allowNullResult)
 {
     for (MethodTable* pMT = this; pMT != nullptr; pMT = pMT->GetParentMethodTable())
     {
@@ -9183,7 +9183,11 @@ MethodTable::ResolveVirtualStaticMethod(MethodDesc* pInterfaceMD, BOOL allowInst
             return pMD;
         }
     }
-    COMPlusThrow(kTypeLoadException, E_NOTIMPL);
+
+    if (allowNullResult)
+        return NULL;
+    else
+        COMPlusThrow(kTypeLoadException, E_NOTIMPL);
 }
 
 //==========================================================================================
@@ -9298,7 +9302,12 @@ MethodTable::TryResolveConstraintMethodApprox(
 
     if (pInterfaceMD->IsStatic())
     {
-        return ResolveVirtualStaticMethod(pInterfaceMD, allowInstParam);
+        MethodDesc *result = ResolveVirtualStaticMethod(pInterfaceMD, allowInstParam, pfForceUseRuntimeLookup != NULL);
+        if (result == NULL)
+        {
+            *pfForceUseRuntimeLookup = TRUE;
+        }
+        return result;
     }
 
     // We can't resolve constraint calls effectively for reference types, and there's
