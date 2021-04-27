@@ -162,9 +162,12 @@ namespace VirtualStaticInterfaceMethodTestGen
                                                     if (baseTypeReturnType == "string")
                                                     {
                                                         covariantScenarios++;
-                                                        // This isn't a good place for extensive covariant return testing
-                                                        if ((covariantScenarios % 20) != 0)
-                                                            continue;
+                                                        // We decided covariant scenarios aren't supported
+                                                        continue;
+                                                    }
+                                                    if (scenarioIndex == 258)
+                                                    {
+                                                        Debugger.Break();
                                                     }
                                                     yield return new TestScenario(scenarioIndex++,
                                                                                   interfaceReturnType,
