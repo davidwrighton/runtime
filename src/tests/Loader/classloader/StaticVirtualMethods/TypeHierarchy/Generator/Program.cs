@@ -139,7 +139,7 @@ namespace VirtualStaticInterfaceMethodTestGen
                                         foreach (string baseTypeInstantiationOnDerivedType in possibleBaseTypeInstantiationOnDerivedType)
                                         {
                                             string interfaceTypeInstantiationOnDerivedType = ApplyGenericSubstitution(interfaceTypeInstantiationOnBaseType, baseTypeInstantiationOnDerivedType);
-                                            string derivedTypeReturnType = ApplyGenericSubstitution(baseTypeReturnType, interfaceTypeInstantiationOnDerivedType);
+                                            string derivedTypeReturnType = ApplyGenericSubstitution(interfaceReturnType, interfaceTypeInstantiationOnDerivedType);
 
                                             List<string> possibleDerivedTypeInstantiation = new List<string>();
                                             if (derivedTypeGenericParams == "")

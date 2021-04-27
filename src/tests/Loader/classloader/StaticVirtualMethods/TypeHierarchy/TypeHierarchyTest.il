@@ -6361,12 +6361,12 @@
        extends class BaseScenario258`1<string>
        implements class InterfaceScenario258`1<class [System.Runtime]System.Action`1<string>>
 {
-  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>> MethodImplOnDerived() cil managed noinlining
+  .method public static class [System.Runtime]System.Action`1<string> MethodImplOnDerived() cil managed noinlining
   {
     .override method !0 class InterfaceScenario258`1<class [System.Runtime]System.Action`1<string>>::Method()
-    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>> V_O)
+    .locals init (class [System.Runtime]System.Action`1<string> V_O)
     ldloca.s 0
-    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>>
+    initobj class [System.Runtime]System.Action`1<string>
     ldloc.0
     ret
   } // end of method MethodImplOnDerived
@@ -6435,12 +6435,12 @@
        extends class BaseScenario261`1<string>
        implements class InterfaceScenario261`1<class [System.Runtime]System.Action`1<string>>
 {
-  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>> MethodImplOnDerived() cil managed noinlining
+  .method public static class [System.Runtime]System.Action`1<string> MethodImplOnDerived() cil managed noinlining
   {
     .override method !0 class InterfaceScenario261`1<class [System.Runtime]System.Action`1<string>>::Method()
-    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>> V_O)
+    .locals init (class [System.Runtime]System.Action`1<string> V_O)
     ldloca.s 0
-    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>>
+    initobj class [System.Runtime]System.Action`1<string>
     ldloc.0
     ret
   } // end of method MethodImplOnDerived
@@ -6509,12 +6509,12 @@
        extends class BaseScenario264`1<string>
        implements class InterfaceScenario264`1<class [System.Runtime]System.Action`1<string>>
 {
-  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>> MethodImplOnDerived() cil managed noinlining
+  .method public static class [System.Runtime]System.Action`1<string> MethodImplOnDerived() cil managed noinlining
   {
     .override method !0 class InterfaceScenario264`1<class [System.Runtime]System.Action`1<string>>::Method()
-    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>> V_O)
+    .locals init (class [System.Runtime]System.Action`1<string> V_O)
     ldloca.s 0
-    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<string>>
+    initobj class [System.Runtime]System.Action`1<string>
     ldloc.0
     ret
   } // end of method MethodImplOnDerived
@@ -6583,12 +6583,12 @@
        extends class BaseScenario267`1<!0>
        implements class InterfaceScenario267`1<class [System.Runtime]System.Action`1<!0>>
 {
-  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<!0>> MethodImplOnDerived() cil managed noinlining
+  .method public static class [System.Runtime]System.Action`1<!0> MethodImplOnDerived() cil managed noinlining
   {
     .override method !0 class InterfaceScenario267`1<class [System.Runtime]System.Action`1<!0>>::Method()
-    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<!0>> V_O)
+    .locals init (class [System.Runtime]System.Action`1<!0> V_O)
     ldloca.s 0
-    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<!0>>
+    initobj class [System.Runtime]System.Action`1<!0>
     ldloc.0
     ret
   } // end of method MethodImplOnDerived
@@ -6657,12 +6657,12 @@
        extends class BaseScenario270`1<!0>
        implements class InterfaceScenario270`1<class [System.Runtime]System.Action`1<!0>>
 {
-  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<!0>> MethodImplOnDerived() cil managed noinlining
+  .method public static class [System.Runtime]System.Action`1<!0> MethodImplOnDerived() cil managed noinlining
   {
     .override method !0 class InterfaceScenario270`1<class [System.Runtime]System.Action`1<!0>>::Method()
-    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<!0>> V_O)
+    .locals init (class [System.Runtime]System.Action`1<!0> V_O)
     ldloca.s 0
-    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<!0>>
+    initobj class [System.Runtime]System.Action`1<!0>
     ldloc.0
     ret
   } // end of method MethodImplOnDerived
@@ -6731,12 +6731,12 @@
        extends class BaseScenario273`1<class [System.Runtime]System.Func`1<!0>>
        implements class InterfaceScenario273`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>>
 {
-  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>> MethodImplOnDerived() cil managed noinlining
+  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>> MethodImplOnDerived() cil managed noinlining
   {
     .override method !0 class InterfaceScenario273`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>>::Method()
-    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>> V_O)
+    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>> V_O)
     ldloca.s 0
-    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>>
+    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>
     ldloc.0
     ret
   } // end of method MethodImplOnDerived
@@ -6805,12 +6805,12 @@
        extends class BaseScenario276`1<class [System.Runtime]System.Func`1<!0>>
        implements class InterfaceScenario276`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>>
 {
-  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>> MethodImplOnDerived() cil managed noinlining
+  .method public static class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>> MethodImplOnDerived() cil managed noinlining
   {
     .override method !0 class InterfaceScenario276`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>>::Method()
-    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>> V_O)
+    .locals init (class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>> V_O)
     ldloca.s 0
-    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>>
+    initobj class [System.Runtime]System.Action`1<class [System.Runtime]System.Func`1<!0>>
     ldloc.0
     ret
   } // end of method MethodImplOnDerived
