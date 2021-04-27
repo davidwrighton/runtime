@@ -165,10 +165,6 @@ namespace VirtualStaticInterfaceMethodTestGen
                                                         // We decided covariant scenarios aren't supported
                                                         continue;
                                                     }
-                                                    if (scenarioIndex == 258)
-                                                    {
-                                                        Debugger.Break();
-                                                    }
                                                     yield return new TestScenario(scenarioIndex++,
                                                                                   interfaceReturnType,
                                                                                   interfaceTypeGenericParams,
