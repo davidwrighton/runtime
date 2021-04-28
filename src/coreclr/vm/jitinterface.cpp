@@ -5753,6 +5753,16 @@ void CEEInfo::getCallInfo(
         }
     }
 
+    // Propagate resolved constraint information to the pResolvedToken for subsequent use by embedGenericHandle
+    pResolvedToken->hMethod = pResult->hMethod;
+
+    if (exactType != th)
+    {
+        pResolvedToken->hClass = CORINFO_CLASS_HANDLE(exactType.GetMethodTable());
+        pResolvedToken->pTypeSpec = nullptr;
+        pResolvedToken->cbTypeSpec = 0;
+    }
+
     EE_TO_JIT_TRANSITION();
 }
 
