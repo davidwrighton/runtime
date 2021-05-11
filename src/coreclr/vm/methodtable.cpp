@@ -5659,6 +5659,11 @@ void MethodTable::DoFullyLoad(Generics::RecursionGraph * const pVisited,  const 
             }
             else
             {
+                if (HasVirtualStaticMethods() && !IsAbstract() && !IsSharedByGenericInstantiations())
+                {
+                    VerifyThatAllVirtualStaticMethodsAreImplemented();
+                }
+                
                 // Finally, mark this method table as fully loaded
                 SetIsFullyLoaded();
             }
@@ -9173,7 +9178,7 @@ MethodDesc *MethodTable::GetDefaultConstructor(BOOL forceBoxedEntryPoint /* = FA
 //==========================================================================================
 // Finds the (non-unboxing) MethodDesc that implements the interface virtual static method pInterfaceMD.
 MethodDesc *
-MethodTable::ResolveVirtualStaticMethod(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD, BOOL allowNullResult)
+MethodTable::ResolveVirtualStaticMethod(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD, BOOL allowNullResult, BOOL checkDuplicates)
 {
     if (!pInterfaceMD->IsSharedByGenericMethodInstantiations() && !pInterfaceType->IsSharedByGenericInstantiations())
     {
@@ -9203,7 +9208,7 @@ MethodTable::ResolveVirtualStaticMethod(MethodTable* pInterfaceType, MethodDesc*
             // Search for match on a per-level in the type hierarchy
             for (MethodTable* pMT = this; pMT != nullptr; pMT = pMT->GetParentMethodTable())
             {
-                MethodDesc* pMD = pMT->TryResolveVirtualStaticMethodOnThisType(pInterfaceType, pInterfaceMD);
+                MethodDesc* pMD = pMT->TryResolveVirtualStaticMethodOnThisType(pInterfaceType, pInterfaceMD, checkDuplicates);
                 if (pMD != nullptr)
                 {
                     return pMD;
@@ -9253,7 +9258,7 @@ MethodTable::ResolveVirtualStaticMethod(MethodTable* pInterfaceType, MethodDesc*
 // Try to locate the appropriate MethodImpl matching a given interface static virtual method.
 // Returns nullptr on failure.
 MethodDesc*
-MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD)
+MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD, BOOL checkDuplicates)
 {
     HRESULT hr = S_OK;
     IMDInternalImport* pMDInternalImport = GetMDImport();
@@ -9294,7 +9299,11 @@ MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType
         MethodTable *pInterfaceMT = ClassLoader::LoadTypeDefOrRefOrSpecThrowing(
             GetModule(),
             tkParent,
-            &sigTypeContext)
+            &sigTypeContext,
+            ClassLoader::ThrowIfNotFound,
+            ClassLoader::FailIfUninstDefOrRef,
+            ClassLoader::LoadTypes,
+            CLASS_LOAD_EXACTPARENTS)
             .GetMethodTable();
         if (pInterfaceMT != pInterfaceType)
         {
@@ -9305,7 +9314,8 @@ MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType
             methodDecl,
             &sigTypeContext,
             /* strictMetadataChecks */ FALSE,
-            /* allowInstParam */ FALSE);
+            /* allowInstParam */ FALSE,
+            /* owningTypeLoadLevel */ CLASS_LOAD_EXACTPARENTS);
         if (pMethodDecl == nullptr)
         {
             COMPlusThrow(kTypeLoadException, E_FAIL);
@@ -9326,7 +9336,8 @@ MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType
             methodBody,
             &sigTypeContext,
             /* strictMetadataChecks */ FALSE,
-            /* allowInstParam */ FALSE);
+            /* allowInstParam */ FALSE,
+            /* owningTypeLoadLevel */ CLASS_LOAD_EXACTPARENTS);
         if (pMethodImpl == nullptr)
         {
             COMPlusThrow(kTypeLoadException, E_FAIL);
@@ -9341,15 +9352,54 @@ MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType
 
         if (pInterfaceMD->HasMethodInstantiation() || pMethodImpl->HasMethodInstantiation() || HasInstantiation())
         {
-            return pMethodImpl->FindOrCreateAssociatedMethodDesc(pMethodImpl, this, FALSE, pInterfaceMD->GetMethodInstantiation(), /* allowInstParam */ FALSE);
+            pMethodImpl = pMethodImpl->FindOrCreateAssociatedMethodDesc(
+                pMethodImpl,
+                this,
+                FALSE,
+                pInterfaceMD->GetMethodInstantiation(),
+                /* allowInstParam */ FALSE,
+                /* forceRemotableMethod */ FALSE,
+                /* allowCreate */ TRUE,
+                /* level */ CLASS_LOAD_EXACTPARENTS);
         }
-        else
+        if (pMethodImpl != nullptr)
         {
-            return pMethodImpl;
+            if (!checkDuplicates)
+            {
+                return pMethodImpl;
+            }
+            if (pPrevMethodImpl != nullptr)
+            {
+                // Two MethodImpl records found for the same virtual static interface method
+                COMPlusThrow(kTypeLoadException, E_FAIL);
+            }
+            pPrevMethodImpl = pMethodImpl;
         }
     }
 
-    return nullptr;
+    return pPrevMethodImpl;
+}
+
+void
+MethodTable::VerifyThatAllVirtualStaticMethodsAreImplemented()
+{
+    InterfaceMapIterator it = IterateInterfaceMap();
+    while (it.Next())
+    {
+        MethodTable *pInterfaceMT = it.GetInterface();
+        if (pInterfaceMT->HasVirtualStaticMethods())
+        {
+            for (MethodIterator it(pInterfaceMT); it.IsValid(); it.Next())
+            {
+                MethodDesc *pMD = it.GetMethodDesc();
+                if (!ResolveVirtualStaticMethod(pInterfaceMT, pMD, /* allowNullResult */ TRUE, /* checkDuplicates */ TRUE))
+                {
+                    IMDInternalImport* pInternalImport = GetModule()->GetMDImport();
+                    GetModule()->GetAssembly()->ThrowTypeLoadException(pInternalImport, GetCl(), pMD->GetName(), IDS_CLASSLOAD_STATICVIRTUAL);
+                }
+            }
+        }
+    }
 }
 
 //==========================================================================================
