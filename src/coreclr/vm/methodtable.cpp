@@ -5659,7 +5659,18 @@ void MethodTable::DoFullyLoad(Generics::RecursionGraph * const pVisited,  const 
             }
             else
             {
-                if (HasVirtualStaticMethods() && !IsAbstract() && !IsSharedByGenericInstantiations())
+                // Validate implementation of virtual static methods on all implemented interfaces unless:
+                // 1) The type resides in the system module (System.Private.CoreLib); we own this module and ensure
+                //    its consistency by other means not requiring runtime checks;
+                // 2) There are no virtual static methods defined on any of the interfaces implemented by this type;
+                // 3) The method is abstract in which case it's allowed to leave some virtual static methods unimplemented
+                //    akin to equivalent behavior of virtual instance method overriding in abstract classes;
+                // 4) The type is a shared generic in which case we generally don't have enough information to perform
+                //    the validation.
+                if (!GetModule()->IsSystem() &&
+                    HasVirtualStaticMethods() &&
+                    !IsAbstract() &&
+                    !IsSharedByGenericInstantiations())
                 {
                     VerifyThatAllVirtualStaticMethodsAreImplemented();
                 }
@@ -9395,7 +9406,7 @@ MethodTable::VerifyThatAllVirtualStaticMethodsAreImplemented()
                 if (!ResolveVirtualStaticMethod(pInterfaceMT, pMD, /* allowNullResult */ TRUE, /* checkDuplicates */ TRUE))
                 {
                     IMDInternalImport* pInternalImport = GetModule()->GetMDImport();
-                    GetModule()->GetAssembly()->ThrowTypeLoadException(pInternalImport, GetCl(), pMD->GetName(), IDS_CLASSLOAD_STATICVIRTUAL);
+                    GetModule()->GetAssembly()->ThrowTypeLoadException(pInternalImport, GetCl(), pMD->GetName(), IDS_CLASSLOAD_STATICVIRTUAL_NOTIMPL);
                 }
             }
         }
