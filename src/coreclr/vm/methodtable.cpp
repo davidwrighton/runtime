@@ -9247,7 +9247,7 @@ MethodTable::ResolveVirtualStaticMethod(MethodTable* pInterfaceType, MethodDesc*
                         {
                             // Variant matching interface found
                             // Attempt to resolve on variance matched interface
-                            pMD = pMT->TryResolveVirtualStaticMethodOnThisType(it.GetInterface(), pInterfaceMD);
+                            pMD = pMT->TryResolveVirtualStaticMethodOnThisType(it.GetInterface(), pInterfaceMD, checkDuplicates);
                             if (pMD != nullptr)
                             {
                                 return pMD;
@@ -9284,6 +9284,7 @@ MethodTable::TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType
 
     // This gets the count out of the metadata interface.
     uint32_t dwNumberMethodImpls = hEnumMethodImpl.EnumMethodImplGetCount();
+    MethodDesc* pPrevMethodImpl = nullptr;
 
     // Iterate through each MethodImpl declared on this class
     for (uint32_t i = 0; i < dwNumberMethodImpls; i++)
