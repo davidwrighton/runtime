@@ -9403,7 +9403,9 @@ MethodTable::VerifyThatAllVirtualStaticMethodsAreImplemented()
             for (MethodIterator it(pInterfaceMT); it.IsValid(); it.Next())
             {
                 MethodDesc *pMD = it.GetMethodDesc();
-                if (!ResolveVirtualStaticMethod(pInterfaceMT, pMD, /* allowNullResult */ TRUE, /* checkDuplicates */ TRUE))
+                if (pMD->IsVirtual() &&
+                    pMD->IsStatic() &&
+                    !ResolveVirtualStaticMethod(pInterfaceMT, pMD, /* allowNullResult */ TRUE, /* checkDuplicates */ TRUE))
                 {
                     IMDInternalImport* pInternalImport = GetModule()->GetMDImport();
                     GetModule()->GetAssembly()->ThrowTypeLoadException(pInternalImport, GetCl(), pMD->GetName(), IDS_CLASSLOAD_STATICVIRTUAL_NOTIMPL);
