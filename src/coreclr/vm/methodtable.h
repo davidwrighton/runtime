@@ -1560,6 +1560,8 @@ public:
     inline BOOL HasVirtualStaticMethods() const;
     inline void SetHasVirtualStaticMethods();
 
+    void VerifyThatAllVirtualStaticMethodsAreImplemented();
+
     inline WORD GetNumVirtuals()
     {
         LIMITED_METHOD_DAC_CONTRACT;
@@ -2280,7 +2282,7 @@ public:
 
 
     // Resolve virtual static interface method pInterfaceMD on this type.
-    MethodDesc *ResolveVirtualStaticMethod(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD, BOOL allowNullResult);
+    MethodDesc *ResolveVirtualStaticMethod(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD, BOOL allowNullResult, BOOL checkDuplicates = FALSE);
 
     // Try a partial resolve of the constraint call, up to generic code sharing.
     //
@@ -2397,7 +2399,7 @@ public:
 
     // Try to resolve a given static virtual method override on this type. Return nullptr
     // when not found.
-    MethodDesc *TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD);
+    MethodDesc *TryResolveVirtualStaticMethodOnThisType(MethodTable* pInterfaceType, MethodDesc* pInterfaceMD, BOOL checkDuplicates);
 
 public:
     static MethodDesc *MapMethodDeclToMethodImpl(MethodDesc *pMDDecl);
