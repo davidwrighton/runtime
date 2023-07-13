@@ -872,7 +872,8 @@ private:
                 unsigned   methodFlags            = compiler->info.compCompHnd->getMethodAttribs(methodHnd);
                 const bool isLateDevirtualization = true;
                 const bool explicitTailCall = (call->AsCall()->gtCallMoreFlags & GTF_CALL_M_EXPLICIT_TAILCALL) != 0;
-                compiler->impDevirtualizeCall(call, nullptr, &methodHnd, &methodFlags, &context, nullptr,
+                CORINFO_CONTEXT_HANDLE contextInput = context;
+                compiler->impDevirtualizeCall(call, nullptr, &methodHnd, &methodFlags, &contextInput, &context,
                                               isLateDevirtualization, explicitTailCall);
             }
             else
