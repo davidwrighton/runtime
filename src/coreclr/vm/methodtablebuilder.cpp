@@ -4242,11 +4242,6 @@ VOID    MethodTableBuilder::InitializeFieldDescs(FieldDesc *pFieldDescList,
             {
                 IfFailThrow(COR_E_TYPELOAD);
             }
-
-            if (bmtFP->fHasFixedAddressValueTypes && GetAssembly()->IsCollectible())
-            {
-                BuildMethodTableThrowException(IDS_CLASSLOAD_COLLECTIBLEFIXEDVTATTR);
-            }
         }
 
 
