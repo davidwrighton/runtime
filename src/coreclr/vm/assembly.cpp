@@ -1434,6 +1434,14 @@ void RunManagedStartup()
     args[0] = PtrToArgSlot(s_wszDiagnosticStartupHookPaths);
 
     managedStartup.Call(args);
+
+    MethodDescCallSite getTypeCall(METHOD__TYPE__GET_TYPE_FROM_NATIVE);
+    ARG_SLOT argsGetType[1];
+    args[0] = PtrToArgSlot("System.Collections.Concurrent.ConcurrentDictionary`2+Node[], System.Collections.Concurrent");
+    REFLECTCLASSBASEREF refType = (REFLECTCLASSBASEREF)getTypeCall.Call_RetOBJECTREF(argsGetType);
+    TypeHandle th = refType refType->GetType();
+    MethodTable* pMT = th.GetMethodTable();
+    // Do something with the MethodTable
 }
 
 INT32 Assembly::ExecuteMainMethod(PTRARRAYREF *stringArgs, BOOL waitForOtherThreads)

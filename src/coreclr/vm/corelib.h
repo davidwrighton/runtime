@@ -864,6 +864,8 @@ DEFINE_CLASS(TIMESPAN,              System,                 TimeSpan)
 
 DEFINE_CLASS(TYPE,                  System,                 Type)
 DEFINE_METHOD(TYPE,                 GET_TYPE_FROM_HANDLE,   GetTypeFromHandle,          SM_RuntimeTypeHandle_RetType)
+DEFINE_METHOD(TYPE,                 GET_TYPE_FROM_NATIVE, GetTypeFromNative, NoSig)
+
 DEFINE_PROPERTY(TYPE,               IS_IMPORT,              IsImport,                   Bool)
 
 DEFINE_CLASS(TYPE_DELEGATOR,        Reflection,             TypeDelegator)

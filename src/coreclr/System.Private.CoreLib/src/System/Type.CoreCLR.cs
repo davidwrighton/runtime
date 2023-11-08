@@ -12,6 +12,10 @@ namespace System
 {
     public abstract partial class Type : MemberInfo, IReflect
     {
+        private static Type GetTypeFromNative(byte* input)
+        {
+            return Type.GetType(Marshal.PtrToStringUTF8((IntPtr)input)!)!;
+        }
         public bool IsInterface
         {
             get
