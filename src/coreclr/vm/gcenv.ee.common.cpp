@@ -294,9 +294,10 @@ StackWalkAction GcStackCrawlCallBack(CrawlFrame* pCF, VOID* pData)
     #endif // _DEBUG
 
             DWORD relOffsetOverride = NO_OVERRIDE_OFFSET;
-#if defined(FEATURE_EH_FUNCLETS) && defined(USE_GC_INFO_DECODER)
+#if defined(FEATURE_EH_FUNCLETS)
             if (pCF->ShouldParentToFuncletUseUnwindTargetLocationForGCReporting())
             {
+ #if defined(USE_GC_INFO_DECODER)
                 GCInfoToken gcInfoToken = pCF->GetGCInfoToken();
                 GcInfoDecoder _gcInfoDecoder(
                                     gcInfoToken,
@@ -304,6 +305,7 @@ StackWalkAction GcStackCrawlCallBack(CrawlFrame* pCF, VOID* pData)
                                     );
 
                 if(_gcInfoDecoder.WantsReportOnlyLeaf())
+#endif
                 {
                     // We're in a special case of unwinding from a funclet, and resuming execution in
                     // another catch funclet associated with same parent function. We need to report roots.
@@ -322,9 +324,8 @@ StackWalkAction GcStackCrawlCallBack(CrawlFrame* pCF, VOID* pData)
                     STRESS_LOG3(LF_GCROOTS, LL_INFO1000, "Setting override offset = %u for method %pM ControlPC = %p\n",
                         relOffsetOverride, pMD, GetControlPC(pCF->GetRegisterSet()));
                 }
-
             }
-#endif // FEATURE_EH_FUNCLETS && USE_GC_INFO_DECODER
+#endif // FEATURE_EH_FUNCLETS
 
             pCM->EnumGcRefs(pCF->GetRegisterSet(),
                             pCF->GetCodeInfo(),

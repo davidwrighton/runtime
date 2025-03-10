@@ -2593,7 +2593,7 @@ void StubLinkerCPU::EmitComMethodStubProlog(TADDR pFrameVptr,
     // profiler blocks.
     if (CORProfilerTrackTransitions() && bShouldProfile)
     {
-        EmitProfilerComCallProlog(pFrameVptr, /*Frame*/ kESI);
+        COMToCLRWorkerProlog(pFrameVptr, /*Frame*/ kESI);
     }
 #endif // PROFILING_SUPPORTED
 

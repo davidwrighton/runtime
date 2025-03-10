@@ -4816,7 +4816,7 @@ HCIMPL3_RAW(void, JIT_ReversePInvokeEnterTrackTransitions, ReversePInvokeFrame* 
         JIT_ReversePInvokeEnterRare(frame, _ReturnAddress(), GetMethod(handle)->IsILStub() ? (UMEntryThunk*)secretArg  : (UMEntryThunk*)NULL);
     }
 
-#ifndef FEATURE_EH_FUNCLETS
+#if defined(TARGET_X86) && defined(TARGET_WINDOWS)
     frame->record.m_pEntryFrame = frame->currentThread->GetFrame();
     frame->record.m_ExReg.Handler = (PEXCEPTION_ROUTINE)FastNExportExceptHandler;
     INSTALL_EXCEPTION_HANDLING_RECORD(&frame->record.m_ExReg);
@@ -4849,7 +4849,7 @@ HCIMPL1_RAW(void, JIT_ReversePInvokeEnter, ReversePInvokeFrame* frame)
         JIT_ReversePInvokeEnterRare(frame, _ReturnAddress());
     }
 
-#ifndef FEATURE_EH_FUNCLETS
+#if defined(TARGET_X86) && defined(TARGET_WINDOWS)
     frame->record.m_pEntryFrame = frame->currentThread->GetFrame();
     frame->record.m_ExReg.Handler = (PEXCEPTION_ROUTINE)FastNExportExceptHandler;
     INSTALL_EXCEPTION_HANDLING_RECORD(&frame->record.m_ExReg);
@@ -4867,7 +4867,7 @@ HCIMPL1_RAW(void, JIT_ReversePInvokeExitTrackTransitions, ReversePInvokeFrame* f
     // to make this exit faster.
     frame->currentThread->m_fPreemptiveGCDisabled.StoreWithoutBarrier(0);
 
-#ifndef FEATURE_EH_FUNCLETS
+#if defined(TARGET_X86) && defined(TARGET_WINDOWS)
     UNINSTALL_EXCEPTION_HANDLING_RECORD(&frame->record.m_ExReg);
 #endif
 
@@ -4890,7 +4890,7 @@ HCIMPL1_RAW(void, JIT_ReversePInvokeExit, ReversePInvokeFrame* frame)
     // to make this exit faster.
     frame->currentThread->m_fPreemptiveGCDisabled.StoreWithoutBarrier(0);
 
-#ifndef FEATURE_EH_FUNCLETS
+#if defined(TARGET_X86) && defined(TARGET_WINDOWS)
     UNINSTALL_EXCEPTION_HANDLING_RECORD(&frame->record.m_ExReg);
 #endif
 }

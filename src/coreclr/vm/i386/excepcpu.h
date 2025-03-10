@@ -16,7 +16,10 @@
 
 #include "../dlls/mscorrc/resource.h"
 
+#ifndef FEATURE_EH_FUNCLETS
 #define THROW_CONTROL_FOR_THREAD_FUNCTION  ThrowControlForThread
+#else
+#endif
 
 #define STATUS_CLR_GCCOVER_CODE         STATUS_PRIVILEGED_INSTRUCTION
 
