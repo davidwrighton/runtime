@@ -2895,7 +2895,15 @@ public:
 
 #ifdef FEATURE_EH_FUNCLETS
     PTR_RUNTIME_FUNCTION GetFunctionEntry();
-    BOOL        IsFunclet()     { WRAPPER_NO_CONTRACT; return GetJitManager()->IsFunclet(this); }
+    BOOL        IsFunclet()
+    {
+        WRAPPER_NO_CONTRACT;
+        if (m_isFuncletCache == 2)
+        {
+            m_isFuncletCache = GetJitManager()->IsFunclet(this) ? 1 : 0;
+        }
+        return m_isFuncletCache; 
+    }
     EECodeInfo  GetMainFunctionInfo();
 #endif // FEATURE_EH_FUNCLETS
 
@@ -2906,7 +2914,18 @@ public:
         return GetCodeManager()->GetFrameSize(GetGCInfoToken());
     }
 
-    PTR_CBYTE   DecodeGCHdrInfo(hdrInfo   ** infoPtr);
+    FORCEINLINE PTR_CBYTE DecodeGCHdrInfo(hdrInfo   ** infoPtr)
+    {
+        if (m_hdrInfoTable == NULL)
+        {
+            return DecodeGCHdrInfoHelper(infoPtr);
+        }
+    
+        *infoPtr = &m_hdrInfoBody;
+        return m_hdrInfoTable;
+    }
+private:
+    PTR_CBYTE   DecodeGCHdrInfoHelper(hdrInfo   ** infoPtr);
 #endif // TARGET_X86
 
 #if defined(TARGET_WASM)
@@ -2928,6 +2947,7 @@ private:
     IJitManager        *m_pJM;
     DWORD               m_relOffset;
 #ifdef FEATURE_EH_FUNCLETS
+    uint8_t             m_isFuncletCache;
     PTR_RUNTIME_FUNCTION m_pFunctionEntry;
 #endif // FEATURE_EH_FUNCLETS
 

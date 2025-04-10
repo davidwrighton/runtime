@@ -116,9 +116,9 @@ class AsmOffsets
     public const int OFFSETOF__StackFrameIterator__m_AdjustedControlPC = 0x140;
 #elif TARGET_X86
     public const int OFFSETOF__REGDISPLAY__m_pCurrentContext = 0x4;
-    public const int SIZEOF__StackFrameIterator = 0x3bc;
-    public const int OFFSETOF__StackFrameIterator__m_isRuntimeWrappedExceptions = 0x3aa;
-    public const int OFFSETOF__StackFrameIterator__m_AdjustedControlPC = 0x3b8;
+    public const int SIZEOF__StackFrameIterator = 0x3c4;
+    public const int OFFSETOF__StackFrameIterator__m_isRuntimeWrappedExceptions = 0x3b2;
+    public const int OFFSETOF__StackFrameIterator__m_AdjustedControlPC = 0x3c0;
 #else // TARGET_64BIT
     public const int OFFSETOF__REGDISPLAY__m_pCurrentContext = 0x4;
     public const int SIZEOF__StackFrameIterator = 0xbc;

@@ -1541,6 +1541,10 @@ protected:
 
     PTR_DomainAssembly      m_pDomainAssembly;
 
+private:
+    // Helper function for IsRuntimeWrapExceptions
+    BOOL                    IsRuntimeWrapExceptionsWorker();
+
 public:
     //-----------------------------------------------------------------------------------------
     // Returns a BOOL to indicate if we have computed whether compiler has instructed us to
