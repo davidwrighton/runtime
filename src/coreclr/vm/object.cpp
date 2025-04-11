@@ -1867,7 +1867,7 @@ void ExceptionObject::SetStackTrace(OBJECTREF stackTrace)
 //   that both of these arrays are consistent. That means that the stack trace doesn't contain
 //   frames that need keep alive objects and that are not protected by entries in the keep alive
 //   array.
-void ExceptionObject::GetStackTrace(StackTraceArray & stackTrace, PTRARRAYREF * outKeepAliveArray /*= NULL*/) const
+void ExceptionObject::GetStackTrace(StackTraceArray & stackTrace, PTRARRAYREF * outKeepAliveArray, Thread *pCurrentThread) const
 {
     CONTRACTL
     {
@@ -1882,9 +1882,16 @@ void ExceptionObject::GetStackTrace(StackTraceArray & stackTrace, PTRARRAYREF * 
     ExceptionObject::GetStackTraceParts(_stackTrace, stackTrace, outKeepAliveArray);
 
 #ifndef DACCESS_COMPILE
-    Thread *pThread = GetThread();
+    if ((stackTrace.Get() != NULL) && (stackTrace.GetObjectThread() != pCurrentThread))
+    {
+        GetStackTraceClone(stackTrace, outKeepAliveArray);
+    }
+#endif // DACCESS_COMPILE
+}
 
-    if ((stackTrace.Get() != NULL) && (stackTrace.GetObjectThread() != pThread))
+#ifndef DACCESS_COMPILE
+void ExceptionObject::GetStackTraceClone(StackTraceArray & stackTrace, PTRARRAYREF * outKeepAliveArray)
+{
     {
         struct
         {
@@ -1964,8 +1971,8 @@ void ExceptionObject::GetStackTrace(StackTraceArray & stackTrace, PTRARRAYREF * 
         }
         GCPROTECT_END();
     }
-#endif // DACCESS_COMPILE
 }
+#endif // DACCESS_COMPILE
 
 // Get the stack trace and the dynamic method array from the stack trace object.
 // If the stack trace was created by another thread, it returns clones of both arrays.
