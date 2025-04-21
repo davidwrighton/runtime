@@ -211,9 +211,115 @@ bool VMToOSInterface::ReleaseRWMapping(void* pStart, size_t size)
     return UnmapViewOfFile(pStart);
 }
 
+struct TemplateThunkMappingData
+{
+    typedef PVOID (*MapViewOfFile3_t)(HANDLE, HANDLE, PVOID, ULONG64, SIZE_T, ULONG, ULONG, MEM_EXTENDED_PARAMETER*, ULONG);
+    MapViewOfFile3_t MapViewOfFile3 = NULL;
+    typedef PVOID (*VirtualAlloc2_t)(HANDLE, PVOID, SIZE_T, ULONG, ULONG, MEM_EXTENDED_PARAMETER*, ULONG);
+    VirtualAlloc2_t VirtualAlloc2 = NULL;
+    typedef BOOL (*UnmapViewOfFileEx_t)(PVOID, ULONG);
+    UnmapViewOfFileEx_t UnmapViewOfFileEx = NULL;
+    HANDLE hFileMapping = NULL;
+    LONG UsedSize = 0x10000; // The first 64KB is used for 
+};
+
+static TemplateThunkMappingData *volatile s_pThunkData = NULL;
+
+TemplateThunkMappingData *InitializeTemplateThunkMappingData()
+{
+#ifdef TARGET_X86
+    return NULL;
+#else
+    auto pThunkData = s_pThunkData;
+    if (pThunkData != NULL)
+    {
+        return pThunkData;
+    }
+
+    pThunkData = new TemplateThunkMappingData();
+
+    HMODULE kernel32 = LoadLibraryW(L"kernelbase.dll");
+    if (kernel32 == NULL)
+    {
+        goto configDone;
+    }
+    HMODULE wincorememory = LoadLibraryW(L"api-ms-win-core-memory-l1-1-6.dll");
+    if (wincorememory == NULL)
+    {
+        goto configDone;
+    }
+
+    pThunkData->MapViewOfFile3 = (TemplateThunkMappingData::MapViewOfFile3_t)GetProcAddress(wincorememory, "MapViewOfFile3");
+    if (pThunkData->MapViewOfFile3 == NULL)
+    {
+        goto configDone;
+    }
+    pThunkData->VirtualAlloc2 = (TemplateThunkMappingData::VirtualAlloc2_t)GetProcAddress(wincorememory, "VirtualAlloc2");
+    if (pThunkData->VirtualAlloc2 == NULL)
+    {
+        goto configDone;
+    }
+    pThunkData->UnmapViewOfFileEx = (TemplateThunkMappingData::UnmapViewOfFileEx_t)GetProcAddress(kernel32, "UnmapViewOfFileEx");
+    if (pThunkData->UnmapViewOfFileEx == NULL)
+    {
+        goto configDone;
+    }
+
+    pThunkData->hFileMapping = CreateFileMappingW(INVALID_HANDLE_VALUE, NULL, PAGE_EXECUTE_READWRITE | SEC_COMMIT, 0, 0x10000, NULL);
+
+configDone:
+
+    if (kernel32 != NULL)
+    {
+        FreeLibrary(kernel32);
+    }
+
+    if (NULL != InterlockedCompareExchangePointer((PVOID*)&s_pThunkData, pThunkData, NULL))
+    {
+        delete pThunkData;
+    }
+
+    return s_pThunkData;
+#endif
+}
+
 void* VMToOSInterface::CreateTemplate(void* pImageTemplate, size_t templateSize, void (*codePageGenerator)(uint8_t* pageBase, uint8_t* pageBaseRX, size_t size))
 {
-    return NULL;
+    auto pThunkData = InitializeTemplateThunkMappingData();
+    if ((pThunkData == NULL) || pThunkData->hFileMapping == NULL)
+    {
+        return NULL;
+    }
+
+    LONG newValueForUsedSize = InterlockedAdd(&pThunkData->UsedSize, (LONG)templateSize);
+    LONG oldValueForUsedSize = newValueForUsedSize - (LONG)templateSize;
+
+    uint8_t* reservedRegion = (uint8_t*)pThunkData->VirtualAlloc2(GetCurrentProcess(), NULL, ALIGN_UP(templateSize, 0x10000), MEM_RESERVE_PLACEHOLDER | MEM_RESERVE, PAGE_NOACCESS, NULL, 0);
+    BOOL splitPlaceholderResult = VirtualFree(reservedRegion, templateSize, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+    if (!splitPlaceholderResult)
+    {
+        VirtualFree(reservedRegion, 0, MEM_RELEASE);
+        return NULL;
+    }
+
+    void* mappedMemory = pThunkData->MapViewOfFile3(pThunkData->hFileMapping, GetCurrentProcess(), reservedRegion, (ULONG64)oldValueForUsedSize, templateSize, MEM_REPLACE_PLACEHOLDER, PAGE_READWRITE, NULL, 0);
+    void* result = NULL;
+    if (mappedMemory != NULL)
+    {
+        codePageGenerator((uint8_t*)mappedMemory, (uint8_t*)mappedMemory, templateSize);
+        BOOL unmapResult = UnmapViewOfFile(mappedMemory);
+        assert(unmapResult);
+        result = (void*)(uintptr_t)oldValueForUsedSize;
+    }
+    else
+    {
+        VirtualFree(reservedRegion, 0, MEM_RELEASE);
+    }
+
+    BOOL virtFreeResult = VirtualFree(reservedRegion + templateSize, 0, MEM_RELEASE);
+    assert(virtFreeResult);
+
+    return result;
 }
 
 bool VMToOSInterface::AllocateThunksFromTemplateRespectsStartAddress()
@@ -223,10 +329,56 @@ bool VMToOSInterface::AllocateThunksFromTemplateRespectsStartAddress()
 
 void* VMToOSInterface::AllocateThunksFromTemplate(void* pTemplate, size_t templateSize, void* pStart)
 {
-    return NULL;
+    auto pThunkData = InitializeTemplateThunkMappingData();
+    if ((pThunkData == NULL) || pThunkData->hFileMapping == NULL)
+    {
+        return NULL;
+    }
+
+    uint8_t* reservedRegion = (uint8_t*)pThunkData->VirtualAlloc2(GetCurrentProcess(), NULL, templateSize * 2, MEM_RESERVE_PLACEHOLDER | MEM_RESERVE, PAGE_NOACCESS, NULL, 0);
+    if (reservedRegion == NULL)
+    {
+        return NULL;
+    }
+
+    BOOL splitPlaceholderResult = VirtualFree(reservedRegion, templateSize, MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER);
+    if (!splitPlaceholderResult)
+    {
+        VirtualFree(reservedRegion, 0, MEM_RELEASE);
+        return NULL;
+    }
+
+    void* mappedMemoryCode = pThunkData->MapViewOfFile3(pThunkData->hFileMapping, GetCurrentProcess(), reservedRegion, (ULONG64)pTemplate, templateSize, MEM_REPLACE_PLACEHOLDER, PAGE_EXECUTE_READ, NULL, 0);
+    if (mappedMemoryCode == NULL)
+    {
+        VirtualFree(reservedRegion, 0, MEM_RELEASE);
+        VirtualFree(reservedRegion + templateSize, 0, MEM_RELEASE);
+        return NULL;
+    }
+    void* mappedMemoryData = pThunkData->MapViewOfFile3(pThunkData->hFileMapping, GetCurrentProcess(), reservedRegion + templateSize, 0, templateSize, MEM_REPLACE_PLACEHOLDER, PAGE_WRITECOPY, NULL, 0);
+    if (mappedMemoryData == NULL)
+    {
+        pThunkData->UnmapViewOfFileEx(mappedMemoryCode, MEM_PRESERVE_PLACEHOLDER);
+        VirtualFree(reservedRegion, 0, MEM_RELEASE);
+        VirtualFree(reservedRegion + templateSize, 0, MEM_RELEASE);
+    }
+
+    return reservedRegion;
 }
 
 bool VMToOSInterface::FreeThunksFromTemplate(void* thunks, size_t templateSize)
 {
-    return false;
+    auto pThunkData = InitializeTemplateThunkMappingData();
+    if ((pThunkData == NULL) || pThunkData->hFileMapping == NULL)
+    {
+        return false;
+    }
+
+    uint8_t* mappedMemoryCode = (uint8_t*)thunks;
+    uint8_t* mappedMemoryData = mappedMemoryCode + templateSize;
+    pThunkData->UnmapViewOfFileEx(mappedMemoryCode, MEM_PRESERVE_PLACEHOLDER);
+    pThunkData->UnmapViewOfFileEx(mappedMemoryData, MEM_PRESERVE_PLACEHOLDER);
+    VirtualFree(mappedMemoryCode, 0, MEM_RELEASE);
+    VirtualFree(mappedMemoryData, 0, MEM_RELEASE);
+    return true;
 }
