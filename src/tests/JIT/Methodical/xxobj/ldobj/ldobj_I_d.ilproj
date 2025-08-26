@@ -4,6 +4,7 @@
   </PropertyGroup>
   <PropertyGroup>
     <DebugType>Full</DebugType>
+    <RequiresProcessIsolation>true</RequiresProcessIsolation>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="ldobj_I_d.il" />

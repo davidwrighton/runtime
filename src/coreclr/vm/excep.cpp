@@ -7350,7 +7350,8 @@ VOID DECLSPEC_NORETURN UnwindAndContinueRethrowHelperAfterCatch(Frame* pEntryFra
             {
                 ((InterpreterFrame*)pEntryFrame)->SetIsFaulting(true);
             }
-#endif // FEATURE_INTERPRETER
+            #endif // FEATURE_INTERPRETER
+            MessageBoxW(0, L"EH", L"Debug", MB_OK);
             DispatchManagedException(orThrowable);
         }
     }
