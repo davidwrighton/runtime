@@ -829,6 +829,11 @@ public:
     // About the signature.
 
     BOOL IsVarArg();
+#ifdef DACCESS_COMPILE
+    HRESULT IsVarArgDAC(BOOL *isVarArg);
+    HRESULT GetSignatureDAC(Signature *pSignature);
+#endif // DACCESS_COMPILE
+
     BOOL IsVoid();
     BOOL HasRetBuffArg();
 
