@@ -1138,6 +1138,17 @@ public:
             m_CallConv &= ~IMAGE_CEE_CS_CALLCONV_HASTHIS;
         }
 
+        SigPointer GetReturnTypeSig() const
+        {
+            LIMITED_METHOD_CONTRACT;
+            return m_pRetType;
+        }
+        SigPointer GetArgumentsSig() const
+        {
+            LIMITED_METHOD_CONTRACT;
+            return m_pStart;
+        }
+
     // These are protected because Reflection subclasses Metasig
     protected:
 

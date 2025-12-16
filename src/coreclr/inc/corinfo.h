@@ -691,6 +691,12 @@ enum class CorInfoCallConvExtension
     Swift
 };
 
+// Determines whether or not this calling convention is an instance method calling convention.
+inline bool callConvIsInstanceMethodCallConv(CorInfoCallConvExtension callConv)
+{
+    return callConv == CorInfoCallConvExtension::Thiscall || callConv == CorInfoCallConvExtension::CMemberFunction || callConv == CorInfoCallConvExtension::StdcallMemberFunction || callConv == CorInfoCallConvExtension::FastcallMemberFunction;
+}
+
 #ifdef TARGET_X86
 inline bool IsCallerPop(CorInfoCallConvExtension callConv)
 {
@@ -701,12 +707,6 @@ inline bool IsCallerPop(CorInfoCallConvExtension callConv)
 #endif // UNIX_X86_ABI
 }
 #endif
-
-// Determines whether or not this calling convention is an instance method calling convention.
-inline bool callConvIsInstanceMethodCallConv(CorInfoCallConvExtension callConv)
-{
-    return callConv == CorInfoCallConvExtension::Thiscall || callConv == CorInfoCallConvExtension::CMemberFunction || callConv == CorInfoCallConvExtension::StdcallMemberFunction || callConv == CorInfoCallConvExtension::FastcallMemberFunction;
-}
 
 // These are returned from getMethodOptions
 enum CorInfoOptions

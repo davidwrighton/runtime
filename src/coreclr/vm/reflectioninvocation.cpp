@@ -263,6 +263,18 @@ public:
         LIMITED_METHOD_CONTRACT;
         return (*m_ppNativeSig)->NumFixedArgs();
     }
+
+    bool HasSig()
+    {
+        LIMITED_METHOD_CONTRACT;
+        return false;
+    }
+
+    MetaSig* GetSig()
+    {
+        LIMITED_METHOD_CONTRACT;
+        return nullptr;
+    }
 };
 
 class ArgIteratorForMethodInvoke : public ArgIteratorTemplate<ArgIteratorBaseForMethodInvoke>

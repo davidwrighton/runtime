@@ -1899,6 +1899,8 @@ int ArgIteratorTemplate<ARGITERATOR_BASE>::GetNextOffset()
 #endif
 }
 
+CorInfoCallConvExtension GetUnmanagedCallConvExtension(MetaSig* pSig);
+
 template<class ARGITERATOR_BASE>
 void ArgIteratorTemplate<ARGITERATOR_BASE>::ComputeReturnFlags()
 {
@@ -2007,6 +2009,42 @@ void ArgIteratorTemplate<ARGITERATOR_BASE>::ComputeReturnFlags()
                 break;
             }
 #endif // defined(TARGET_X86) || defined(TARGET_AMD64)
+
+
+#if (defined(TARGET_ARM64) || defined(TARGET_AMD64)) && defined(TARGET_WINDOWS)
+#ifndef DACCESS_COMPILE
+            if (HasSig())
+            {
+                // On Windows ARM64 and AMD64, the member function calling convention
+                // uses a retbuf for ALL value types other than a few specific ones
+                bool isMemberFunction = false;
+                switch (GetSig()->GetCallingConvention())
+                {
+                    case IMAGE_CEE_CS_CALLCONV_THISCALL:
+                        isMemberFunction = true;
+                        break;
+                    case IMAGE_CEE_CS_CALLCONV_UNMANAGED:
+                        switch (GetUnmanagedCallConvExtension(GetSig()))
+                        {
+                            case CorInfoCallConvExtension::Thiscall:
+                            case CorInfoCallConvExtension::CMemberFunction:
+                            case CorInfoCallConvExtension::StdcallMemberFunction:
+                            case CorInfoCallConvExtension::FastcallMemberFunction:
+                                isMemberFunction = true;
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                }
+                if (isMemberFunction)
+                {
+                    flags |= RETURN_HAS_RET_BUFFER;
+                    break;
+                }
+            }
+#endif
+#endif // (defined(TARGET_ARM64) || defined(TARGET_AMD64)) && defined(TARGET_WINDOWS)
 
 #if defined(TARGET_LOONGARCH64) || defined(TARGET_RISCV64)
             if  (size <= ENREGISTERED_RETURNTYPE_INTEGER_MAXSIZE)
@@ -2293,6 +2331,12 @@ public:
     MetaSig *GetSig(void)
     {
         return m_pSig;
+    }
+
+    bool HasSig()
+    {
+        LIMITED_METHOD_CONTRACT;
+        return true;
     }
 };
 

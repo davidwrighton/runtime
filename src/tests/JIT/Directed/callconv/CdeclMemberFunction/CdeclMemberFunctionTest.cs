@@ -135,6 +135,11 @@ public unsafe class CdeclMemberFunctionTest
 
         Assert.Equal(c.width, result.width);
         Assert.Equal(c.height, result.height);
+
+        result = CdeclMemberFunctionNative.GetSizeFromManaged(&c);
+
+        Assert.Equal(c.width, result.width);
+        Assert.Equal(c.height, result.height);
     }
 
     private static void Test4ByteHFAUnmanagedCallersOnly()
