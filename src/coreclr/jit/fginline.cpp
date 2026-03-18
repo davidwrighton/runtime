@@ -252,6 +252,7 @@ public:
     fgWalkResult PreOrderVisit(GenTree** use, GenTree* user)
     {
         GenTree* tree = *use;
+        assert(tree != nullptr);
 
         // All the operations here and in the corresponding postorder
         // callback (LateDevirtualization) are triggered by GT_CALL or

@@ -649,11 +649,7 @@ void CodeGen::genCodeForTreeNode(GenTree* treeNode)
             break;
 
         default:
-#ifdef DEBUG
-            NYIRAW(GenTree::OpName(treeNode->OperGet()));
-#else
             NYI_WASM("Opcode not implemented");
-#endif
             break;
     }
 }

@@ -8595,6 +8595,7 @@ public:
 
     bool IsPhiDefnStmt() const
     {
+        assert(m_rootNode != nullptr);
         return m_rootNode->IsPhiDefn();
     }
 
@@ -9525,6 +9526,10 @@ inline bool GenTree::OperIsInitBlkOp()
     }
     GenTree* src       = Data();
     bool     isInitBlk = src->TypeIs(TYP_INT);
+    if (isInitBlk != src->gtSkipReloadOrCopy()->IsInitVal())
+    {
+        NYI_WASM("ACK");
+    }
     assert(isInitBlk == src->gtSkipReloadOrCopy()->IsInitVal());
 
     return isInitBlk;

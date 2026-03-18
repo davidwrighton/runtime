@@ -289,7 +289,7 @@ extern "C" void assertAbort(const char* why, const char* file, unsigned line)
                 (env == nullptr) ? "UNKNOWN" : env->compiler->info.compFullName, file, line, why, phaseName);
     }
 #endif // FUNC_INFO_LOGGING
-
+implReadyToRunUnsupported();
     if (env->compHnd->doAssert(file, line, msg))
     {
         DebugBreak();

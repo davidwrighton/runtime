@@ -3922,6 +3922,10 @@ template <class T>
 inline emitAttr emitTypeSize(T type)
 {
     assert(TypeGet(type) < TYP_COUNT);
+    if (emitTypeSizes[TypeGet(type)] == 0)
+    {
+        NYI_WASM("Problem");
+    }
     assert(emitTypeSizes[TypeGet(type)] > 0);
     return (emitAttr)emitTypeSizes[TypeGet(type)];
 }
