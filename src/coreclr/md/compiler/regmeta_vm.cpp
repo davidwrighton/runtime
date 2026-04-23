@@ -36,7 +36,7 @@
 //*****************************************************************************
 HRESULT RegMeta::AddToCache()
 {
-#if defined(FEATURE_METADATA_IN_VM)
+#if defined(FEATURE_METADATA_IN_VM) && defined(FEATURE_METADATA_SUPPORTS_IMPORT)
     HRESULT hr = S_OK;
 
     // The ref count must be > 0 before the module is published, else another
@@ -53,7 +53,7 @@ ErrExit:
         m_bCached = false;
     }
     return hr;
-#else // FEATURE_METADATA_IN_VM
+#else // FEATURE_METADATA_IN_VM && FEATURE_METADATA_SUPPORTS_IMPORT
     return S_OK;
 #endif // FEATURE_METADATA_IN_VM
 } // RegMeta::AddToCache
@@ -90,7 +90,7 @@ RegMeta::ResolveTypeRef(
     IUnknown ** ppIScope,
     mdTypeDef * ptd)
 {
-#ifdef FEATURE_METADATA_IN_VM
+#if defined(FEATURE_METADATA_IN_VM) && defined(FEATURE_METADATA_SUPPORTS_IMPORT)
     HRESULT hr;
 
     TypeRefRec * pTypeRefRec;
@@ -159,7 +159,7 @@ RegMeta::ResolveTypeRef(
 
 ErrExit:
     return hr;
-#else // FEATURE_METADATA_IN_VM
+#else // FEATURE_METADATA_IN_VM && FEATURE_METADATA_SUPPORTS_IMPORT
     return E_NOTIMPL;
 #endif // FEATURE_METADATA_IN_VM
 } // RegMeta::ResolveTypeRef
@@ -170,7 +170,7 @@ ErrExit:
 // Thus Release() is in a satellite lib.
 ULONG RegMeta::Release()
 {
-#if defined(FEATURE_METADATA_IN_VM)
+#if defined(FEATURE_METADATA_IN_VM) && defined(FEATURE_METADATA_SUPPORTS_IMPORT)
     _ASSERTE(!m_bCached || LOADEDMODULES::IsEntryInList(this));
 #else
     _ASSERTE(!m_bCached);
@@ -189,7 +189,7 @@ ULONG RegMeta::Release()
             //  discovered the module, so this thread can now safely delete it.
             delete this;
         }
-#if defined(FEATURE_METADATA_IN_VM)
+#if defined(FEATURE_METADATA_IN_VM) && defined(FEATURE_METADATA_SUPPORTS_IMPORT)
         else if (LOADEDMODULES::RemoveModuleFromLoadedList(this))
         {   // If the module was cached, RemoveModuleFromLoadedList() will try to
             //  safely un-publish the module, and if it succeeds, no other thread
@@ -197,7 +197,7 @@ ULONG RegMeta::Release()
             m_bCached = false;
             delete this;
         }
-#endif // FEATURE_METADATA_IN_VM
+#endif // FEATURE_METADATA_IN_VM && FEATURE_METADATA_SUPPORTS_IMPORT
     }
 
     return cRef;
