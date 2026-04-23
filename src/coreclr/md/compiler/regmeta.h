@@ -1255,21 +1255,6 @@ public:
         mdToken     tkEventType,            // [IN] a reference (mdTypeRef or mdTypeRef) to the Event class
         mdEvent     *pmdEvent);             // [OUT] output event token
 
-    STDMETHODIMP AddDeclarativeSecurityHelper(
-        mdToken     tk,                     // [IN] Parent token (typedef/methoddef)
-        DWORD       dwAction,               // [IN] Security action (CorDeclSecurity)
-        void const  *pValue,                // [IN] Permission set blob
-        DWORD       cbValue,                // [IN] Byte count of permission set blob
-        mdPermission*pmdPermission);        // [OUT] Output permission token
-
-    STDMETHODIMP SetResolutionScopeHelper(  // Return hresult.
-        mdTypeRef   tr,                     // [IN] TypeRef record to update
-        mdToken     rs);                    // [IN] new ResolutionScope
-
-    STDMETHODIMP SetManifestResourceOffsetHelper(  // Return hresult.
-        mdManifestResource mr,              // [IN] The manifest token
-        ULONG       ulOffset);              // [IN] new offset
-
     STDMETHODIMP SetTypeParent(             // Return hresult.
         mdTypeDef   td,                     // [IN] Type definition
         mdToken     tkExtends);             // [IN] parent type

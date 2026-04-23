@@ -787,21 +787,6 @@ STDMETHODIMP RegMeta::DefineCustomAttribute(
             IfFailGo(UpdateENCLog(tkOwner));
             goto ErrExit;
         }
-        else if (strcmp(szName, COR_SUPPRESS_UNMANAGED_CODE_CHECK_ATTRIBUTE_ANSI) == 0)
-        {
-            // If we spot an unmanged code check suppression attribute, turn on
-            // the bit that says there's declarative security on the
-            // class/method, but still write the attribute itself.
-            if (TypeFromToken(tkOwner) == mdtTypeDef)
-            {
-                IfFailGo(_TurnInternalFlagsOn(tkOwner, tdHasSecurity));
-            }
-            else if (TypeFromToken(tkOwner) == mdtMethodDef)
-            {
-                IfFailGo(_TurnInternalFlagsOn(tkOwner, mdHasSecurity));
-            }
-            IfFailGo(UpdateENCLog(tkOwner));
-        }
     }
 
     IfFailGo(m_pStgdb->m_MiniMd.AddCustomAttributeRecord(&pRecord, &iRecord));

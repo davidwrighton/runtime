@@ -113,8 +113,7 @@ DECLARE_INTERFACE_(IMetaDataHelper, IUnknown)
     STDMETHOD(SetReaderWriterLock)(UTSemReadWrite * pSem) PURE;
 };  // IMetaDataHelper
 
-
-EXTERN_GUID(IID_IMetaDataEmitHelper, 0x5c240ae4, 0x1e09, 0x11d3, 0x94, 0x24, 0x0, 0x0, 0xf8, 0x8, 0x34, 0x60);
+EXTERN_GUID(IID_IMetaDataEmitHelper, 0x8c027291, 0x9c50, 0x4a1b, 0xb8, 0x50, 0x19, 0x7a, 0x03, 0xd4, 0x23, 0x55);
 
 #undef  INTERFACE
 #define INTERFACE IMetaDataEmitHelper
@@ -136,21 +135,6 @@ DECLARE_INTERFACE_(IMetaDataEmitHelper, IUnknown)
         DWORD       dwEventFlags,           // [IN] CorEventAttr
         mdToken     tkEventType,            // [IN] a reference (mdTypeRef or mdTypeRef) to the Event class
         mdEvent     *pmdEvent) PURE;        // [OUT] output event token
-
-    STDMETHOD(AddDeclarativeSecurityHelper) (
-        mdToken     tk,                     // [IN] Parent token (typedef/methoddef)
-        DWORD       dwAction,               // [IN] Security action (CorDeclSecurity)
-        void const  *pValue,                // [IN] Permission set blob
-        DWORD       cbValue,                // [IN] Byte count of permission set blob
-        mdPermission*pmdPermission) PURE;   // [OUT] Output permission token
-
-    STDMETHOD(SetResolutionScopeHelper)(    // Return hresult.
-        mdTypeRef   tr,                     // [IN] TypeRef record to update
-        mdToken     rs) PURE;               // [IN] new ResolutionScope
-
-    STDMETHOD(SetManifestResourceOffsetHelper)(  // Return hresult.
-        mdManifestResource mr,              // [IN] The manifest token
-        ULONG       ulOffset) PURE;         // [IN] new offset
 
     STDMETHOD(SetTypeParent)(               // Return hresult.
         mdTypeDef   td,                     // [IN] Type definition
