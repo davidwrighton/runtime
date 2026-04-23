@@ -11,6 +11,10 @@
 #ifndef _COR_H_
 #define _COR_H_
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
+#define FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
+#endif
+
 //*****************************************************************************
 // Required includes
 #include <ole2.h>                       // Definitions of OLE types.
@@ -204,6 +208,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
     STDMETHOD(SetModuleProps)(              // S_OK or error.
         LPCWSTR     szName) PURE;           // [IN] If not NULL, the name of the module to set.
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(Save)(                        // S_OK or error.
         LPCWSTR     szFile,                 // [IN] The filename to save to.
         DWORD       dwSaveFlags) PURE;      // [IN] Flags for the save.
@@ -211,6 +216,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
     STDMETHOD(SaveToStream)(                // S_OK or error.
         IStream     *pIStream,              // [IN] A writable stream to save to.
         DWORD       dwSaveFlags) PURE;      // [IN] Flags for the save.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(GetSaveSize)(                 // S_OK or error.
         CorSaveSize fSave,                  // [IN] cssAccurate or cssQuick.
@@ -231,8 +237,10 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         mdTypeDef   tdEncloser,             // [IN] TypeDef token of the enclosing type.
         mdTypeDef   *ptd) PURE;             // [OUT] Put TypeDef token here
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SetHandler)(                  // S_OK.
         IUnknown    *pUnk) PURE;            // [IN] The new error handler.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(DefineMethod)(                // S_OK or error.
         mdTypeDef   td,                     // Parent TypeDef
@@ -254,6 +262,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         LPCWSTR     szName,                 // [IN] Name of the TypeRef.
         mdTypeRef   *ptr) PURE;             // [OUT] Put TypeRef token here.
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(DefineImportType)(            // S_OK or error.
         IMetaDataAssemblyImport *pAssemImport,  // [IN] Assembly containing the TypeDef.
         const void  *pbHashValue,           // [IN] Hash Blob for Assembly.
@@ -262,6 +271,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         mdTypeDef   tdImport,               // [IN] The imported TypeDef.
         IMetaDataAssemblyEmit *pAssemEmit,  // [IN] Assembly into which the TypeDef is imported.
         mdTypeRef   *ptr) PURE;             // [OUT] Put TypeRef token here.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(DefineMemberRef)(             // S_OK or error
         mdToken     tkImport,               // [IN] ClassRef or ClassDef importing a member.
@@ -270,6 +280,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         ULONG       cbSigBlob,              // [IN] count of bytes in the signature blob
         mdMemberRef *pmr) PURE;             // [OUT] memberref token
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(DefineImportMember)(          // S_OK or error.
         IMetaDataAssemblyImport *pAssemImport,  // [IN] Assembly containing the Member.
         const void  *pbHashValue,           // [IN] Hash Blob for Assembly.
@@ -290,6 +301,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         mdMethodDef mdFire,                 // [IN] optional fire method
         mdMethodDef rmdOtherMethods[],      // [IN] optional array of other methods associate with the event
         mdEvent     *pmdEvent) PURE;        // [OUT] output event token
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(SetClassLayout) (
         mdTypeDef   td,                     // [IN] typedef
@@ -297,6 +309,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         COR_FIELD_OFFSET rFieldOffsets[],   // [IN] array of layout specification
         ULONG       ulClassSize) PURE;      // [IN] size of the class
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(DeleteClassLayout) (
         mdTypeDef   td) PURE;               // [IN] typedef whose layout is to be deleted.
 
@@ -318,6 +331,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
     STDMETHOD(SetRVA)(                      // S_OK or error.
         mdMethodDef md,                     // [IN] Method for which to set offset
         ULONG       ulRVA) PURE;            // [IN] The offset
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(GetTokenFromSig)(             // S_OK or error.
         PCCOR_SIGNATURE pvSig,              // [IN] Signature to define.
@@ -329,9 +343,11 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         mdModuleRef *pmur) PURE;            // [OUT] returned
 
     // <TODO>@FUTURE:  This should go away once everyone starts using SetMemberRefProps.</TODO>
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SetParent)(                   // S_OK or error.
         mdMemberRef mr,                     // [IN] Token for the ref to be fixed up.
         mdToken     tk) PURE;               // [IN] The ref parent.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(GetTokenFromTypeSpec)(        // S_OK or error.
         PCCOR_SIGNATURE pvSig,              // [IN] TypeSpec Signature to define.
@@ -347,8 +363,10 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         ULONG       cchString,              // [IN] Length of string.
         mdString    *pstk) PURE;            // [OUT] String token.
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(DeleteToken)(                 // Return code.
         mdToken     tkObj) PURE;            // [IN] The token to be deleted
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(SetMethodProps)(              // S_OK or error.
         mdMethodDef md,                     // [IN] The MethodDef.
@@ -356,6 +374,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         ULONG       ulCodeRVA,              // [IN] Code RVA.
         DWORD       dwImplFlags) PURE;      // [IN] Impl flags.
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SetTypeDefProps)(             // S_OK or error.
         mdTypeDef   td,                     // [IN] The TypeDef.
         DWORD       dwTypeDefFlags,         // [IN] TypeDef flags.
@@ -377,6 +396,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         void const  *pvPermission,          // [IN] Permission blob.
         ULONG       cbPermission,           // [IN] Count of bytes of pvPermission.
         mdPermission *ppm) PURE;            // [OUT] Permission token.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(DefinePinvokeMap)(            // Return code.
         mdToken     tk,                     // [IN] FieldDef or MethodDef.
@@ -384,6 +404,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         LPCWSTR     szImportName,           // [IN] Import name.
         mdModuleRef mrImportDLL) PURE;      // [IN] ModuleRef token for the target DLL.
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SetPinvokeMap)(               // Return code.
         mdToken     tk,                     // [IN] FieldDef or MethodDef.
         DWORD       dwMappingFlags,         // [IN] Flags used for mapping.
@@ -392,6 +413,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
 
     STDMETHOD(DeletePinvokeMap)(            // Return code.
         mdToken     tk) PURE;               // [IN] FieldDef or MethodDef.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     // New CustomAttribute functions.
     STDMETHOD(DefineCustomAttribute)(       // Return code.
@@ -401,10 +423,12 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         ULONG       cbCustomAttribute,      // [IN] The custom value data length.
         mdCustomAttribute *pcv) PURE;       // [OUT] The custom value token value on return.
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SetCustomAttributeValue)(     // Return code.
         mdCustomAttribute pcv,              // [IN] The custom value token whose value to replace.
         void const  *pCustomAttribute,      // [IN] The custom value data.
         ULONG       cbCustomAttribute) PURE;// [IN] The custom value data length.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(DefineField)(                 // S_OK or error.
         mdTypeDef   td,                     // Parent TypeDef
@@ -467,6 +491,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         ULONG       cchValue) PURE;         // [IN] size of constant value (string, in wide chars).
 
     // Specialized Custom Attributes for security.
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(DefineSecurityAttributeSet)(  // Return code.
         mdToken     tkObj,                  // [IN] Class or method requiring security attributes.
         COR_SECATTR rSecAttrs[],            // [IN] Array of security attribute descriptions.
@@ -488,6 +513,7 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         PCOR_SIGNATURE pvTranslatedSig,     // [OUT] buffer to hold translated signature
         ULONG       cbTranslatedSigMax,
         ULONG       *pcbTranslatedSig) PURE;// [OUT] count of bytes in the translated signature
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(SetMethodImplFlags)(          // [IN] S_OK or error.
         mdMethodDef md,                     // [IN] Method for which to set ImplFlags
@@ -497,12 +523,14 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         mdFieldDef  fd,                     // [IN] Field for which to set offset
         ULONG       ulRVA) PURE;            // [IN] The offset
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(Merge)(                       // S_OK or error.
         IMetaDataImport *pImport,           // [IN] The scope to be merged.
         IMapToken   *pHostMapToken,         // [IN] Host IMapToken interface to receive token remap notification
         IUnknown    *pHandler) PURE;        // [IN] An object to receive to receive error notification.
 
     STDMETHOD(MergeEnd)() PURE;             // S_OK or error.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     // This interface is sealed.  Do not change, add, or remove anything.  Instead, derive a new iterface.
 
@@ -525,6 +553,7 @@ DECLARE_INTERFACE_(IMetaDataEmit2, IMetaDataEmit)
         ULONG       cbSigBlob,              // [IN] count of bytes in the signature blob
         mdMethodSpec *pmi) PURE;            // [OUT] method instantiation token
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(GetDeltaSaveSize)(            // S_OK or error.
         CorSaveSize fSave,                  // [IN] cssAccurate or cssQuick.
         DWORD       *pdwSaveSize) PURE;     // [OUT] Put the size here.
@@ -540,6 +569,7 @@ DECLARE_INTERFACE_(IMetaDataEmit2, IMetaDataEmit)
     STDMETHOD(SaveDeltaToMemory)(           // S_OK or error.
         void        *pbData,                // [OUT] Location to write data.
         ULONG       cbData) PURE;           // [IN] Max size of data buffer.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(DefineGenericParam)(          // S_OK or error.
         mdToken      tk,                    // [IN] TypeDef or MethodDef
@@ -550,6 +580,7 @@ DECLARE_INTERFACE_(IMetaDataEmit2, IMetaDataEmit)
         mdToken      rtkConstraints[],      // [IN] Array of type constraints (TypeDef,TypeRef,TypeSpec)
         mdGenericParam *pgp) PURE;          // [OUT] Put GenericParam token here
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SetGenericParamProps)(        // S_OK or error.
         mdGenericParam gp,                  // [IN] GenericParam
         DWORD        dwParamFlags,          // [IN] Flags, for future use (e.g. variance)
@@ -558,6 +589,7 @@ DECLARE_INTERFACE_(IMetaDataEmit2, IMetaDataEmit)
         mdToken      rtkConstraints[]) PURE;// [IN] Array of type constraints (TypeDef,TypeRef,TypeSpec)
 
     STDMETHOD(ResetENCLog)() PURE;          // S_OK or error.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
 };
 
