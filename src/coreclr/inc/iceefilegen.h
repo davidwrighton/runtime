@@ -116,9 +116,11 @@ class ICeeFileGen {
 
     virtual HRESULT SetDirectoryEntry (HCEEFILE ceeFile, HCEESECTION section, ULONG num, ULONG size, ULONG offset = 0);
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     // Write out the metadata in "emitter" to the metadata section in "ceeFile"
     // Use EmitMetaDataAt() for more control
     virtual HRESULT EmitMetaDataEx (HCEEFILE ceeFile, IMetaDataEmit *emitter);
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     virtual HRESULT SetManifestEntry(HCEEFILE ceeFile, ULONG size, ULONG offset);
 
@@ -146,6 +148,7 @@ class ICeeFileGen {
 
     virtual HRESULT SetStrongNameEntry(HCEEFILE ceeFile, ULONG size, ULONG offset);
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     // Emit the metadata from "emitter".
     // If 'section != 0, it will put the data in 'buffer'.  This
     // buffer is assumed to be in 'section' at 'offset' and of size 'buffLen'
@@ -153,6 +156,7 @@ class ICeeFileGen {
     virtual HRESULT EmitMetaDataAt (HCEEFILE ceeFile, IMetaDataEmit *emitter,
                                     HCEESECTION section, DWORD offset,
                                     BYTE* buffer, unsigned buffLen);
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     virtual HRESULT GetFileTimeStamp (HCEEFILE ceeFile, DWORD *pTimeStamp);
     virtual HRESULT SetFileHeaderTimeStamp(HCEEFILE ceeFile, DWORD timeStamp);

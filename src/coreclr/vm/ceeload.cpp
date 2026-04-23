@@ -3964,7 +3964,7 @@ void ReflectionModule::CaptureModuleMetaDataToMemory()
         GC_TRIGGERS;
     }
     CONTRACTL_END;
-
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     // Do not release the emitter. This is a weak reference.
     IMetaDataEmit *pEmitter = this->GetEmitter();
     _ASSERTE(pEmitter != NULL);
@@ -4010,6 +4010,7 @@ void ReflectionModule::CaptureModuleMetaDataToMemory()
     hr = hMDUpdateMode.Release(MDUpdateExtension);
     // Will be S_FALSE if someone changed the MDUpdateMode (from MDUpdateExtension) meanwhile
     _ASSERTE(hr == S_OK);
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 }
 
 

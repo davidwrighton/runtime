@@ -237,10 +237,8 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         mdTypeDef   tdEncloser,             // [IN] TypeDef token of the enclosing type.
         mdTypeDef   *ptd) PURE;             // [OUT] Put TypeDef token here
 
-#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SetHandler)(                  // S_OK.
         IUnknown    *pUnk) PURE;            // [IN] The new error handler.
-#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(DefineMethod)(                // S_OK or error.
         mdTypeDef   td,                     // Parent TypeDef
@@ -354,9 +352,11 @@ DECLARE_INTERFACE_(IMetaDataEmit, IUnknown)
         ULONG       cbSig,                  // [IN] Size of signature data.
         mdTypeSpec *ptypespec) PURE;        // [OUT] returned TypeSpec token.
 
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     STDMETHOD(SaveToMemory)(                // S_OK or error.
         void        *pbData,                // [OUT] Location to write data.
         ULONG       cbData) PURE;           // [IN] Max size of data buffer.
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
     STDMETHOD(DefineUserString)(            // Return code.
         LPCWSTR szString,                   // [IN] User literal string.

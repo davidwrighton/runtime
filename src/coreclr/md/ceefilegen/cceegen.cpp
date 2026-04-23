@@ -382,7 +382,7 @@ HRESULT CCeeGen::getSectionCreate (const char *name, DWORD flags, CeeSection **s
     return S_OK;
 }
 
-
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 HRESULT CCeeGen::emitMetaData(IMetaDataEmit *emitter, CeeSection* section, DWORD offset, BYTE* buffer, unsigned buffLen)
 {
     HRESULT hr = S_OK;
@@ -452,6 +452,7 @@ Exit:
 
     return hr;
 }
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 
 // Create the COM header - it goes at front of .meta section
 // Need to do this before the meta data is copied in, but don't do at

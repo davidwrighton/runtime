@@ -261,13 +261,14 @@ class CCeeGen : public ICeeGenInternal {
         ULONG RVA,                          // [IN] RVA for method to return
         UCHAR **lpBuffer);                  // [OUT] Returned buffer
 
-
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     // Write the metadata in "emitter" to the default metadata section is "section" is 0
     // If 'section != 0, it will put the data in 'buffer'.  This
     // buffer is assumed to be in 'section' at 'offset' and of size 'buffLen'
     // (should use GetSaveSize to ensure that buffer is big enough
     virtual HRESULT emitMetaData(IMetaDataEmit *emitter,
                         CeeSection* section=0, DWORD offset=0, BYTE* buffer=0, unsigned buffLen=0);
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
     virtual HRESULT getMethodRVA(ULONG codeOffset, ULONG *codeRVA);
 
     STDMETHODIMP SetInitialGrowth(DWORD growth);

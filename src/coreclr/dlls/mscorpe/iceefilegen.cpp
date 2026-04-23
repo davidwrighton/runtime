@@ -337,7 +337,7 @@ HRESULT ICeeFileGen::GetDllSwitch (HCEEFILE ceeFile, BOOL *dllSwitch)
     *dllSwitch = gen->getDllSwitch();
     return S_OK;
 }
-
+#ifdef FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 HRESULT ICeeFileGen::EmitMetaDataEx (HCEEFILE ceeFile, IMetaDataEmit *emitter)
 {
     TESTANDRETURNPOINTER(ceeFile);
@@ -357,7 +357,7 @@ HRESULT ICeeFileGen::EmitMetaDataAt (HCEEFILE ceeFile, IMetaDataEmit *emitter, H
 
     return(gen->emitMetaData(emitter, sec, offset, buffer, buffLen));
 }
-
+#endif // FEATURE_METADATA_SUPPORTS_COMPLETE_EMIT
 HRESULT ICeeFileGen::SetManifestEntry(HCEEFILE ceeFile, ULONG size, ULONG offset)
 {
     TESTANDRETURNPOINTER(ceeFile);
