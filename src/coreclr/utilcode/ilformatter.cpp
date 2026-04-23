@@ -12,6 +12,8 @@
 #include "outstring.h"
 #include "opinfo.h"
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
+
 /***************************************************************************/
 void ILFormatter::init(IMetaDataImport* aMeta, const BYTE* aStart,
                   const BYTE* aLimit, unsigned maxStack, const COR_ILMETHOD_SECT_EH* eh) {
@@ -807,3 +809,5 @@ const BYTE* ILFormatter::formatStatement(const BYTE* instrPtr, OutString* out) {
     }
     return(instrPtr);
 }
+
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT

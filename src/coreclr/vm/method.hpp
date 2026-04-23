@@ -993,6 +993,7 @@ public:
         return pModule->GetEmitter();
     }
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     IMetaDataImport* GetRWImporter()
     {
         WRAPPER_NO_CONTRACT;
@@ -1000,6 +1001,7 @@ public:
         _ASSERTE(pModule != NULL);
         return pModule->GetRWImporter();
     }
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 #endif // !DACCESS_COMPILE
 
 #ifdef FEATURE_COMINTEROP

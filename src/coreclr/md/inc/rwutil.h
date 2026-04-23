@@ -172,7 +172,7 @@ private:
     ULONG       m_TableOffset[TBL_COUNT+1]; // Start of each table in map.
     ULONG       m_iCountIndexed;            // number of entries that are indexed.
 #if defined(_DEBUG)
-    IMetaDataImport *m_pImport;             // For data validation.
+    IMDInternalImport *m_pImport;             // For data validation.
 #endif
 };
 

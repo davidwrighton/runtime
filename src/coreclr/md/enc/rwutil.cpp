@@ -480,7 +480,7 @@ HRESULT MDTOKENMAP::Init(
         }
     }
 #if defined(_DEBUG)
-    if (SUCCEEDED(pImport->QueryInterface(IID_IMetaDataImport, (void**)&m_pImport)))
+    if (SUCCEEDED(pImport->QueryInterface(IID_IMDInternalImport, (void**)&m_pImport)))
     {
         // Ok, here's a pretty nasty workaround. We're going to make a big assumption here
         // that we're owned by the pImport, and so we don't need to keep a refcount

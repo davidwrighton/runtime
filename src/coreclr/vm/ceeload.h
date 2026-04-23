@@ -1022,6 +1022,7 @@ public:
         return m_pPEAssembly->GetEmitter();
     }
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     IMetaDataImport2 *GetRWImporter()
     {
         WRAPPER_NO_CONTRACT;
@@ -1030,6 +1031,7 @@ public:
     }
 
     HRESULT GetReadablePublicMetaDataInterface(DWORD dwOpenFlags, REFIID riid, LPVOID * ppvInterface);
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 #endif // !DACCESS_COMPILE
 
 #if defined(FEATURE_READYTORUN)

@@ -155,6 +155,7 @@ static HRESULT appendStrHexA(CQuickBytes *out, int num)
     return appendStrA(out, buff);
 } // static HRESULT appendStrHexA()
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
 /***********************************************************************/
 
 LPCWSTR PrettyPrintSigWorker(
@@ -537,7 +538,7 @@ LPCWSTR PrettyPrintSigWorker(
     appendStrW(out, W(")"));
     return (asStringW(out));
 } // LPCWSTR PrettyPrintSigWorker()
-
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 
 // Internal implementation of PrettyPrintSig().
 
@@ -558,7 +559,6 @@ static HRESULT PrettyPrintClass(
 //*****************************************************************************
 // pretty prints 'type' to the buffer 'out' returns a pointer to the next type,
 // or 0 on a format failure
-
 __checkReturn
 static HRESULT PrettyPrintTypeA(
     PCCOR_SIGNATURE   &typePtr,     // type to convert,

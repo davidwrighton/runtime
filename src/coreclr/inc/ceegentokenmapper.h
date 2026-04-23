@@ -48,7 +48,7 @@ public:
 
     static int IndexForType(mdToken tk);
 
-    CeeGenTokenMapper() : m_pIImport(0), m_cRefs(1) { LIMITED_METHOD_CONTRACT; }
+    CeeGenTokenMapper() : m_cRefs(1) { LIMITED_METHOD_CONTRACT; }
     virtual ~CeeGenTokenMapper() {}
 
 //*****************************************************************************
@@ -96,7 +96,7 @@ public:
 //*****************************************************************************
 // Hand out a copy of the meta data information.
 //*****************************************************************************
-    virtual HRESULT GetMetaData(IMetaDataImport **ppIImport);
+    virtual HRESULT GetMetaData(IMetaDataEmit **ppEmit);
 
 protected:
 // m_rgMap is an array indexed by token type.  For each type, an array of
@@ -104,7 +104,7 @@ protected:
 // do a lookup by type to get the right array, then use the from rid to
 // find the to rid.
     TOKENMAP    m_rgMap[MAX_TOKENMAP];
-    IMetaDataImport *m_pIImport;
+    IMetaDataEmit *m_pIEmit;
     ULONG       m_cRefs;                // Ref count.
 };
 

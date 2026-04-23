@@ -36,7 +36,7 @@ extern "C" mdTypeRef QCALLTYPE ModuleBuilder_GetTypeRef(QCall::ModuleHandle pMod
     _ASSERTE(pRCW);
 
     IMetaDataEmit * pEmit = pRCW->GetEmitter();
-    IMetaDataImport * pImport = pRCW->GetRWImporter();
+    IMDInternalImport * pImport = pRCW->GetMDImport();
 
     if (wszFullName == NULL) {
         COMPlusThrow(kArgumentNullException, W("ArgumentNull_String"));
@@ -67,11 +67,13 @@ extern "C" mdTypeRef QCALLTYPE ModuleBuilder_GetTypeRef(QCall::ModuleHandle pMod
 
     if (pModule == pRefedModule)
     {
+        // TODO! Fix this later.
+        /*
         // referenced type is from the same module so we must be able to find a TypeDef.
         IfFailThrow(pImport->FindTypeDefByName(
             wszFullNameUnescaped,
             RidFromToken(tkResolutionArg) ? tkResolutionArg : mdTypeDefNil,
-            &tr));
+            &tr));*/
     }
     else
     {
@@ -165,6 +167,7 @@ namespace
     //******************************************************************************
     void DefineTypeRefHelper(
         IMetaDataEmit       *pEmit,         // given emit scope
+        IMDInternalImport   *pImport,       // given import scope
         mdTypeDef           td,             // given typedef in the emit scope
         mdTypeRef           *ptr)           // return typeref
     {
@@ -176,24 +179,26 @@ namespace
         }
         CONTRACTL_END;
 
+        LPCUTF8             szName;         // name of the typedef
+        LPCUTF8             szNamespace;    // namespace of the typedef
         CQuickBytes qb;
         WCHAR* szTypeDef = (WCHAR*) qb.AllocThrows((MAX_CLASSNAME_LENGTH+1) * sizeof(WCHAR));
         mdToken             rs;             // resolution scope
         DWORD               dwFlags;
+        mdToken         tdNested;
 
-        SafeComHolder<IMetaDataImport> pImport;
-        IfFailThrow( pEmit->QueryInterface(IID_IMetaDataImport, (void **)&pImport) );
-        IfFailThrow( pImport->GetTypeDefProps(td, szTypeDef, MAX_CLASSNAME_LENGTH, NULL, &dwFlags, NULL) );
+        SafeComHolder<IMDInternalEmit> pInternalEmit;
+        IfFailThrow( pEmit->QueryInterface(IID_IMDInternalEmit, (void **)&pInternalEmit) );
+        IfFailThrow( pImport->GetNameOfTypeDef(td, &szName, &szNamespace));
+        IfFailThrow( pImport->GetTypeDefProps(td, &dwFlags, &tdNested));
         if ( IsTdNested(dwFlags) )
         {
-            mdToken         tdNested;
-            IfFailThrow( pImport->GetNestedClassProps(td, &tdNested) );
-            DefineTypeRefHelper( pEmit, tdNested, &rs);
+            DefineTypeRefHelper( pEmit, pImport, tdNested, &rs);
         }
         else
             rs = TokenFromRid( 1, mdtModule );
 
-        IfFailThrow( pEmit->DefineTypeRefByName( rs, szTypeDef, ptr) );
+        IfFailThrow( pInternalEmit->DefineTypeRefUtf8( rs, szName, szNamespace, ptr) );
     }   // DefineTypeRefHelper
 }
 
@@ -265,7 +270,7 @@ extern "C" INT32 QCALLTYPE ModuleBuilder_GetMemberRef(QCall::ModuleHandle pModul
     if (TypeFromToken(tr) == mdtTypeDef)
     {
         // define a TypeRef using the TypeDef
-        DefineTypeRefHelper(pRCW->GetEmitter(), tr, &tref);
+        DefineTypeRefHelper(pRCW->GetEmitter(), pRCW->GetMDImport(), tr, &tref);
     }
     else
         tref = tr;

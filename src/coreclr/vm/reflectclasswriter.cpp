@@ -34,7 +34,6 @@ HRESULT RefClassWriter::Init(ICeeGenInternal *pCeeGen, IUnknown *pUnk, LPCWSTR s
 
     // Initialize the Import and Emitter interfaces
     m_emitter = NULL;
-    m_importer = NULL;
     m_internalimport = NULL;
     m_ulResourceSize = 0;
 
@@ -43,10 +42,6 @@ HRESULT RefClassWriter::Init(ICeeGenInternal *pCeeGen, IUnknown *pUnk, LPCWSTR s
 
     // Get the interfaces
     HRESULT hr = pUnk->QueryInterface(IID_IMetaDataEmit2, (void**)&m_emitter);
-    if (FAILED(hr))
-        RETURN(hr);
-
-    hr = pUnk->QueryInterface(IID_IMetaDataImport, (void**)&m_importer);
     if (FAILED(hr))
         RETURN(hr);
 
@@ -86,10 +81,6 @@ RefClassWriter::~RefClassWriter()
 
     if (m_emitter) {
         m_emitter->Release();
-    }
-
-    if (m_importer) {
-        m_importer->Release();
     }
 
     if (m_pEmitHelper) {

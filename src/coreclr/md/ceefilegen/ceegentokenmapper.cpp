@@ -125,11 +125,11 @@ int CeeGenTokenMapper::HasTokenMoved(
 //*****************************************************************************
 
 HRESULT CeeGenTokenMapper::GetMetaData(
-    IMetaDataImport **ppIImport)
+    IMetaDataEmit **ppIEmit)
 {
-    if (m_pIImport)
-        return (m_pIImport->QueryInterface(IID_IMetaDataImport, (PVOID *) ppIImport));
-    *ppIImport = 0;
+    if (m_pIEmit)
+        return (m_pIEmit->QueryInterface(IID_IMetaDataEmit, (PVOID *) ppIEmit));
+    *ppIEmit = 0;
     return E_FAIL;
 }
 

@@ -12,6 +12,7 @@
 #include "opinfo.h"
 #include "outstring.h"
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
 struct IMetaDataImport;
 
 #define INVALID_IL_OFFSET 0x80000000
@@ -71,5 +72,6 @@ private:
 
 };
 
-#endif
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
+#endif // ILFormatter_h
 

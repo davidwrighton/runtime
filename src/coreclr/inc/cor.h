@@ -565,6 +565,8 @@ DECLARE_INTERFACE_(IMetaDataEmit2, IMetaDataEmit)
 //--- IMetaDataImport
 //-------------------------------------
 // {7DAC8207-D3AE-4c75-9B67-92801A497D44}
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
+
 EXTERN_GUID(IID_IMetaDataImport, 0x7dac8207, 0xd3ae, 0x4c75, 0x9b, 0x67, 0x92, 0x80, 0x1a, 0x49, 0x7d, 0x44);
 
 //---
@@ -1058,7 +1060,7 @@ DECLARE_INTERFACE_(IMetaDataImport2, IMetaDataImport)
         ULONG       *pcMethodSpecs) PURE;   // [OUT] Put actual count here.
 
 }; // IMetaDataImport2
-
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 //-------------------------------------
 //--- IMetaDataFilter
 //-------------------------------------
@@ -1205,7 +1207,7 @@ DECLARE_INTERFACE_(IMetaDataAssemblyEmit, IUnknown)
 
 };  // IMetaDataAssemblyEmit
 
-
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
 // {EE62470B-E94B-424e-9B7C-2F00C9249F93}
 EXTERN_GUID(IID_IMetaDataAssemblyImport, 0xee62470b, 0xe94b, 0x424e, 0x9b, 0x7c, 0x2f, 0x0, 0xc9, 0x24, 0x9f, 0x93);
 
@@ -1312,6 +1314,7 @@ DECLARE_INTERFACE_(IMetaDataAssemblyImport, IUnknown)
         ULONG    *pcAssemblies) PURE;       // [OUT] The number of assemblies returned.
 };  // IMetaDataAssemblyImport
 
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 
 //*****************************************************************************
 // End Assembly Declarations

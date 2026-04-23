@@ -1080,6 +1080,11 @@ DECLARE_INTERFACE_(IMDInternalEmit, IUnknown)
     STDMETHOD(SetMDUpdateMode)(
         ULONG updateMode, ULONG *pPreviousUpdateMode) PURE;
 
+    STDMETHOD(DefineTypeRefUtf8)(
+        mdToken     tkResolutionScope,      // [IN] ModuleRef or AssemblyRef.
+        LPCUTF8     szName,                 // [IN] Name of the TypeRef.
+        LPCUTF8     szNamespace,            // [IN] Namespace of the TypeRef.
+        mdTypeRef   *ptk) PURE;             // [OUT] Put mdTypeRef here.
 }; // IMDInternalEmit
 
 #ifdef FEATURE_METADATA_CUSTOM_DATA_SOURCE

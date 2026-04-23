@@ -121,11 +121,13 @@ struct CaNamedArg;
 //
 
 class RegMeta :
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     public IMetaDataImport2,
     public IMetaDataAssemblyImport,
-    public IMetaDataTables2
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
+    public IMetaDataTables2,
 
-    , public IMetaDataInfo
+    public IMetaDataInfo
 
 #ifdef FEATURE_METADATA_EMIT
 #ifndef FEATURE_METADATA_EMIT_PORTABLE_PDB
@@ -1286,6 +1288,13 @@ public:
     STDMETHOD(SetMDUpdateMode)(
         ULONG updateMode, ULONG *pPreviousUpdateMode);
 
+    STDMETHOD(DefineTypeRefUtf8)(
+        mdToken     tkResolutionScope,      // [IN] ModuleRef or AssemblyRef.
+        LPCUTF8     szName,                 // [IN] Name of the TypeRef.
+        LPCUTF8     szNamespace,            // [IN] Namespace of the TypeRef.
+        mdTypeRef   *ptk);                  // [OUT] Put mdTypeRef here.
+
+
 #ifdef FEATURE_METADATA_EMIT_PORTABLE_PDB
     STDMETHODIMP GetPathSeparator(          // S_OK or error.
         char        *path,                  // [IN] Path string to search.
@@ -1633,9 +1642,7 @@ protected:
     HRESULT _DefineTypeRef(
         mdToken     tkResolutionScope,      // [IN] ModuleRef or AssemblyRef.
         const void  *szName,                // [IN] Name of the TypeRef.
-        BOOL        isUnicode,              // [IN] Specifies whether the URL is unicode.
-        mdTypeRef   *ptk,                   // [OUT] Put mdTypeRef here.
-        eCheckDups  eCheck=eCheckDefault);  // [IN] Specifies whether to check for duplicates.
+        mdTypeRef   *ptk);                  // [OUT] Put mdTypeRef here.
 
     // Define MethodSemantics
     HRESULT _DefineMethodSemantics(         // S_OK or error.

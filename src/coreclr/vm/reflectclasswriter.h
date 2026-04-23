@@ -15,7 +15,6 @@ class RefClassWriter {
 protected:
     friend class COMDynamicWrite;
 	IMetaDataEmit2*			m_emitter;			// Emit interface.
-	IMetaDataImport*		m_importer;			// Import interface.
 	IMDInternalImport*		m_internalimport;	// Scopeless internal import interface
     ICeeGenInternal*	    m_pCeeGen;
 	IMetaDataEmitHelper*	m_pEmitHelper;
@@ -36,11 +35,6 @@ public:
 	IMetaDataEmitHelper* GetEmitHelper() {
         LIMITED_METHOD_CONTRACT;
 		return m_pEmitHelper;
-	}
-
-	IMetaDataImport* GetRWImporter() {
-        LIMITED_METHOD_CONTRACT;
-		return m_importer;
 	}
 
 	IMDInternalImport* GetMDImport() {

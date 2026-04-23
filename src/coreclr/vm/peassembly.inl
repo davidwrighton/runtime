@@ -256,6 +256,7 @@ inline IMDInternalImport* PEAssembly::GetMDImport()
 
 #ifndef DACCESS_COMPILE
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
 inline IMetaDataImport2 *PEAssembly::GetRWImporter()
 {
     CONTRACT(IMetaDataImport2 *)
@@ -273,6 +274,7 @@ inline IMetaDataImport2 *PEAssembly::GetRWImporter()
 
     RETURN m_pImporter;
 }
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 
 inline IMetaDataEmit *PEAssembly::GetEmitter()
 {

@@ -530,12 +530,13 @@ RegMeta::QueryInterface(
 
     if (riid == IID_IUnknown)
     {
-        *ppUnk = (IUnknown *)(IMetaDataImport2 *)this;
+        *ppUnk = (IUnknown *)(IMDCommon *)this;
     }
     else if (riid == IID_IMDCommon)
     {
         *ppUnk = (IMDCommon *)this;
     }
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     else if (riid == IID_IMetaDataImport)
     {
         *ppUnk = (IMetaDataImport2 *)this;
@@ -548,6 +549,7 @@ RegMeta::QueryInterface(
     {
         *ppUnk = (IMetaDataAssemblyImport *)this;
     }
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
     else if (riid == IID_IMetaDataTables)
     {
         *ppUnk = static_cast<IMetaDataTables *>(this);
@@ -556,7 +558,6 @@ RegMeta::QueryInterface(
     {
         *ppUnk = static_cast<IMetaDataTables2 *>(this);
     }
-
     else if (riid == IID_IMetaDataInfo)
     {
         *ppUnk = static_cast<IMetaDataInfo *>(this);
@@ -1401,7 +1402,7 @@ ErrExit:
     return hr;
 } // RegMeta::ReOpenWithMemory
 
-
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
 //*****************************************************************************
 // This function returns the requested public interface based on the given
 // internal import interface.
@@ -1431,7 +1432,7 @@ ErrExit:
 
     return hr;
 } // MDReOpenMetaDataWithMemory
-
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 
 //
 // returns the "built for" version of a metadata scope.
@@ -1472,7 +1473,7 @@ HRESULT RegMeta::GetIMDInternalImport(
     MDInternalRW *pInternalRW = NULL;
     bool          isLockedForWrite = false;
     IUnknown     *pIUnkInternal = NULL;
-    IUnknown     *pThis = (IMetaDataImport2*)this;
+    IUnknown     *pThis = (IMDCommon*)this;
 
     pIUnkInternal = this->GetCachedInternalInterface(TRUE);
     if (pIUnkInternal)

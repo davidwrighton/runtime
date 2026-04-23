@@ -360,7 +360,7 @@ STDMETHODIMP RegMeta::DefineTypeRefByName(    // S_OK or error.
     IfFailGo(m_pStgdb->m_MiniMd.PreUpdate());
 
     // Common helper function does all of the work.
-    IfFailGo(_DefineTypeRef(tkResolutionScope, szName, TRUE, ptr));
+    IfFailGo(_DefineTypeRef(tkResolutionScope, szName, ptr));
 
 ErrExit:
     return hr;
@@ -384,6 +384,7 @@ STDMETHODIMP RegMeta::DefineImportType(       // S_OK or error.
 #else //!FEATURE_METADATA_EMIT_IN_DEBUGGER
     HRESULT hr = S_OK;
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     IMetaDataImport2 *pImport2 = NULL;
     IMDCommon        *pImport2MDCommon = NULL;
 
@@ -432,7 +433,7 @@ ErrExit:
         pImport2MDCommon->Release();
     if (pAssemImportMDCommon)
         pAssemImportMDCommon->Release();
-
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
     return hr;
 #endif //!FEATURE_METADATA_EMIT_IN_DEBUGGER
 } // RegMeta::DefineImportType
@@ -534,7 +535,7 @@ STDMETHODIMP RegMeta::DefineImportMember(     // S_OK or error.
     mdToken     tkImport,               // [IN] Classref or classdef in emit scope.
     mdMemberRef *pmr)                   // [OUT] Put member ref here.
 {
-#ifdef FEATURE_METADATA_EMIT_IN_DEBUGGER
+#if defined(FEATURE_METADATA_EMIT_IN_DEBUGGER) || !defined(FEATURE_METADATA_SUPPORTS_IMPORT)
     return E_NOTIMPL;
 #else //!FEATURE_METADATA_EMIT_IN_DEBUGGER
     HRESULT hr = S_OK;
@@ -2954,13 +2955,13 @@ STDMETHODIMP RegMeta::ApplyEditAndContinue(   // S_OK or error.
 #ifdef FEATURE_METADATA_EMIT_ALL
     HRESULT hr;
 
-    IMetaDataImport2 *pImport=0;        // Interface on the delta metadata.
+    IMDCommon *pImport=0;        // Interface on the delta metadata.
     RegMeta     *pDeltaMD=0;            // The delta metadata.
     CMiniMdRW   *mdDelta = NULL;
     CMiniMdRW   *mdBase = NULL;
 
     // Get the MiniMd on the delta.
-    IfFailGo(pUnk->QueryInterface(IID_IMetaDataImport2, (void**)&pImport));
+    IfFailGo(pUnk->QueryInterface(IID_IMDCommon, (void**)&pImport));
 
     pDeltaMD = static_cast<RegMeta*>(pImport);
 

@@ -679,12 +679,14 @@ public:
     }
 
 #ifndef DACCESS_COMPILE
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     IMetaDataImport *GetRWImporter()
     {
         WRAPPER_NO_CONTRACT;
 
         return GetModule()->GetRWImporter();
     }
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 #endif // DACCESS_COMPILE
 
     TypeHandle LookupFieldTypeHandle(ClassLoadLevel level = CLASS_LOADED, BOOL dropGenericArgumentLevel = FALSE);

@@ -309,15 +309,9 @@ HRESULT CCeeGen::Cleanup() // virtual
 
     CeeGenTokenMapper *pMapper = m_pTokenMap;
     if (pMapper) {
-        if (pMapper->m_pIImport) {
-            IMetaDataEmit *pIIEmit;
-            if (SUCCEEDED( hr = pMapper->m_pIImport->QueryInterface(IID_IMetaDataEmit, (void **) &pIIEmit)))
-            {
-                pIIEmit->SetHandler(NULL);
-                pIIEmit->Release();
-            }
-            _ASSERTE(SUCCEEDED(hr));
-            pMapper->m_pIImport->Release();
+        if (pMapper->m_pIEmit) {
+            pMapper->m_pIEmit->SetHandler(NULL);
+            pMapper->m_pIEmit->Release();
         }
         pMapper->Release();
         m_pTokenMap = NULL;
@@ -502,7 +496,7 @@ HRESULT CCeeGen::getMapTokenIface(IUnknown **pIMapToken, IMetaDataEmit *emitter)
 
         if (emitter) {
             HRESULT hr;
-            hr = emitter->QueryInterface(IID_IMetaDataImport, (PVOID *) &pMapper->m_pIImport);
+            hr = emitter->QueryInterface(IID_IMetaDataEmit, (PVOID *) &pMapper->m_pIEmit);
             _ASSERTE(SUCCEEDED(hr));
         }
         m_pTokenMap = pMapper;

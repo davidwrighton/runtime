@@ -34,7 +34,7 @@ STDMETHODIMP RegMeta::TranslateSigWithScope(    // S_OK or error.
     ULONG       cbTranslatedSigMax,
     ULONG       *pcbTranslatedSig)      // [OUT] count of bytes in the translated signature
 {
-#ifdef FEATURE_METADATA_EMIT
+#if defined(FEATURE_METADATA_EMIT) && defined(FEATURE_METADATA_SUPPORTS_IMPORT)
     HRESULT     hr = S_OK;
 
     IMDCommon   *pAssemImportMDCommon = NULL;

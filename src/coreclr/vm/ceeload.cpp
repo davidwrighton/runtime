@@ -1600,6 +1600,7 @@ BOOL Module::IsInSameVersionBubble(Module *target)
 }
 #endif // FEATURE_READYTORUN
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
 //---------------------------------------------------------------------------------------
 //
 // Wrapper for Module::GetRWImporter + QI when writing is not needed.
@@ -1650,6 +1651,7 @@ HRESULT Module::GetReadablePublicMetaDataInterface(DWORD dwOpenFlags, REFIID rii
 
     return hr;
 }
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 
 // a special token that indicates no reader could be created - don't try again
 static ISymUnmanagedReader* const k_pInvalidSymReader = (ISymUnmanagedReader*)0x1;

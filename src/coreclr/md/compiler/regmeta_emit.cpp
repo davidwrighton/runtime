@@ -872,9 +872,7 @@ ErrExit:
 HRESULT RegMeta::_DefineTypeRef(
     mdToken     tkResolutionScope,          // [IN] ModuleRef or AssemblyRef.
     const void  *szName,                    // [IN] Name of the TypeRef.
-    BOOL        isUnicode,                  // [IN] Specifies whether the URL is unicode.
-    mdTypeRef   *ptk,                       // [OUT] Put mdTypeRef here.
-    eCheckDups  eCheck)                     // [IN] Specifies whether to check for duplicates.
+    mdTypeRef   *ptk)                       // [OUT] Put mdTypeRef here.
 {
     HRESULT     hr = S_OK;
     LPUTF8      szUTF8FullQualName;
@@ -893,14 +891,7 @@ HRESULT RegMeta::_DefineTypeRef(
               TypeFromToken(tkResolutionScope) == mdtTypeRef ||
               tkResolutionScope == mdTokenNil);
 
-    if (isUnicode)
-    {
-        UTF8STR((LPCWSTR)szName, szUTF8FullQualName);
-    }
-    else
-    {
-        szUTF8FullQualName = (LPUTF8)szName;
-    }
+    UTF8STR((LPCWSTR)szName, szUTF8FullQualName);
     _ASSERTE(szUTF8FullQualName != NULL);
 
     ulStringLen = (ULONG)(strlen(szUTF8FullQualName) + 1);
@@ -913,12 +904,28 @@ HRESULT RegMeta::_DefineTypeRef(
                              ulStringLen);
     _ASSERTE(bSuccess);
 
+    IfFailGo(DefineTypeRefUtf8(tkResolutionScope, (LPCUTF8)qbName.Ptr(), (LPCUTF8)qbNamespace.Ptr(), ptk));
+ErrExit:
+
+    return hr;
+} // HRESULT RegMeta::_DefineTypeRef()
+
+//*****************************************************************************
+// Define a TypeRef given the fully qualified name.
+//*****************************************************************************
+HRESULT RegMeta::DefineTypeRefUtf8(
+    mdToken     tkResolutionScope,          // [IN] ModuleRef or AssemblyRef.
+    LPCUTF8     szName,                    // [IN] Name of the TypeRef.
+    LPCUTF8     szNamespace,               // [IN] Namespace of the TypeRef.
+    mdTypeRef   *ptk)                       // [OUT] Put mdTypeRef here.
+{
+    HRESULT hr = S_OK;
     // Search for existing TypeRef record.
-    if (eCheck==eCheckYes || (eCheck==eCheckDefault && CheckDups(MDDupTypeRef)))
+    if (CheckDups(MDDupTypeRef))
     {
         hr = ImportHelper::FindTypeRefByName(&(m_pStgdb->m_MiniMd), tkResolutionScope,
-                                             (LPCUTF8)qbNamespace.Ptr(),
-                                             (LPCUTF8)qbName.Ptr(), ptk);
+                                             szNamespace,
+                                             szName, ptk);
         if (SUCCEEDED(hr))
         {
             if (IsENCOn())
@@ -950,10 +957,10 @@ HRESULT RegMeta::_DefineTypeRef(
 
     // Set the fields of the TypeRef record.
     IfFailGo(m_pStgdb->m_MiniMd.PutString(TBL_TypeRef, TypeRefRec::COL_Namespace,
-                        pRecord, (LPUTF8)qbNamespace.Ptr()));
+                        pRecord, szNamespace));
 
     IfFailGo(m_pStgdb->m_MiniMd.PutString(TBL_TypeRef, TypeRefRec::COL_Name,
-                        pRecord, (LPUTF8)qbName.Ptr()));
+                        pRecord, szName));
 
     if (!IsNilToken(tkResolutionScope))
         IfFailGo(m_pStgdb->m_MiniMd.PutToken(TBL_TypeRef, TypeRefRec::COL_ResolutionScope,
@@ -961,14 +968,14 @@ HRESULT RegMeta::_DefineTypeRef(
     IfFailGo(UpdateENCLog(*ptk));
 
     // Hash the name.
-    IfFailGo(m_pStgdb->m_MiniMd.AddNamedItemToHash(TBL_TypeRef, *ptk, (LPUTF8)qbName.Ptr(), 0));
+    IfFailGo(m_pStgdb->m_MiniMd.AddNamedItemToHash(TBL_TypeRef, *ptk, szName, 0));
 
 ErrExit:
     ;
 NormalExit:
 
     return hr;
-} // HRESULT RegMeta::_DefineTypeRef()
+}
 
 //*******************************************************************************
 // Define MethodSemantics

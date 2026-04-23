@@ -279,6 +279,7 @@ TADDR PEAssembly::GetIL(RVA il)
 
 #ifndef DACCESS_COMPILE
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
 void PEAssembly::OpenImporter()
 {
     CONTRACTL
@@ -303,6 +304,7 @@ void PEAssembly::OpenImporter()
     if (InterlockedCompareExchangeT(&m_pImporter, pIMDImport, NULL) != NULL)
         pIMDImport->Release();
 }
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 
 void PEAssembly::ConvertMDInternalToReadWrite()
 {
@@ -322,10 +324,10 @@ void PEAssembly::ConvertMDInternalToReadWrite()
     // Take a local copy of *ppImport.  This may be a pointer to an RO
     //  or to an RW MDInternalXX.
     pOld = m_pMDImport;
-    IMetaDataImport *pIMDImport = m_pImporter;
-    if (pIMDImport != NULL)
+    IMetaDataEmit *pIMDEmit = m_pEmitter;
+    if (pIMDEmit != NULL)
     {
-        HRESULT hr = GetMDInternalInterfaceFromPublic(pIMDImport, IID_IMDInternalImport, (void **)&pNew);
+        HRESULT hr = GetMDInternalInterfaceFromPublic(pIMDEmit, IID_IMDInternalImport, (void **)&pNew);
         if (FAILED(hr))
         {
             EX_THROW(EEMessageException, (hr));
@@ -666,7 +668,9 @@ PEAssembly::PEAssembly(
     m_PEImage = NULL;
     m_MDImportIsRW_Debugger_Use_Only = FALSE;
     m_pMDImport = NULL;
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     m_pImporter = NULL;
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
     m_pEmitter = NULL;
     m_refCount = 1;
     m_isSystem = isSystem;
@@ -771,11 +775,13 @@ PEAssembly::~PEAssembly()
 
     GCX_PREEMP();
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     if (m_pImporter != NULL)
     {
         m_pImporter->Release();
         m_pImporter = NULL;
     }
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 
     if (m_pEmitter != NULL)
     {

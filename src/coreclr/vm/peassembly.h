@@ -162,7 +162,9 @@ public:
 
 #ifndef DACCESS_COMPILE
     IMetaDataEmit *GetEmitter();
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     IMetaDataImport2 *GetRWImporter();
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
 #else
     TADDR GetMDInternalRWAddress();
 #endif // DACCESS_COMPILE
@@ -379,7 +381,9 @@ private:
 #endif
 
     void OpenMDImport();
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     void OpenImporter();
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
     void OpenEmitter();
 
 private:
@@ -417,7 +421,9 @@ private:
 #endif
     };
 
+#ifdef FEATURE_METADATA_SUPPORTS_IMPORT
     IMetaDataImport2* m_pImporter;
+#endif // FEATURE_METADATA_SUPPORTS_IMPORT
     IMetaDataEmit* m_pEmitter;
 
     Volatile<LONG>           m_refCount;
