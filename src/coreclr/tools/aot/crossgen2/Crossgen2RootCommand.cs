@@ -156,6 +156,9 @@ namespace ILCompiler
         public Option<int> DeterminismStress { get; } =
             new("--determinism-stress");
 
+        public Option<bool> DumpGCEncodeData { get; } =
+            new("--dumpgcencodedata") { Description = "Dump GC encode data (hex and decoded) for each compiled method" };
+
         public bool CompositeOrInputBubble { get; private set; }
         public OptimizationMode OptimizationMode { get; private set; }
         public ParseResult Result { get; private set; }
@@ -231,6 +234,7 @@ namespace ILCompiler
             Options.Add(StripILBodies);
             Options.Add(SynthesizeRandomMibc);
             Options.Add(DeterminismStress);
+            Options.Add(DumpGCEncodeData);
 
             this.SetAction(result =>
             {

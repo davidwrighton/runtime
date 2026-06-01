@@ -293,6 +293,7 @@ namespace ILCompiler
         private readonly string _perfMapPath;
         private readonly int _perfMapFormatVersion;
         private readonly bool _generateProfileFile;
+        private readonly bool _dumpGcEncodeData;
         private readonly Func<MethodDesc, string> _printReproInstructions;
 
         private readonly ProfileDataManager _profileData;
@@ -344,7 +345,8 @@ namespace ILCompiler
             FileLayoutAlgorithm fileLayoutAlgorithm,
             int customPESectionAlignment,
             bool verifyTypeAndFieldLayout,
-            ReadyToRunContainerFormat format)
+            ReadyToRunContainerFormat format,
+            bool dumpGcEncodeData)
             : base(
                   dependencyGraph,
                   nodeFactory,
@@ -367,6 +369,7 @@ namespace ILCompiler
             _perfMapPath = perfMapPath;
             _perfMapFormatVersion = perfMapFormatVersion;
             _generateProfileFile = generateProfileFile;
+            _dumpGcEncodeData = dumpGcEncodeData;
             _customPESectionAlignment = customPESectionAlignment;
             _format = format;
             SymbolNodeFactory = new ReadyToRunSymbolNodeFactory(nodeFactory, verifyTypeAndFieldLayout);
@@ -973,6 +976,11 @@ namespace ILCompiler
                         {
                             generatedColdCode = true;
                         }
+
+                        if (_dumpGcEncodeData)
+                        {
+                            DumpGCEncodeData(method, methodCodeNodeNeedingCode);
+                        }
                     }
                 }
                 catch (TypeSystemException ex)
@@ -992,6 +1000,183 @@ namespace ILCompiler
                         Logger.Writer.WriteLine($"Warning: Method `{method}` was not compiled because `{ex.Message}` requires runtime JIT");
                 }
             }
+        }
+
+        private void DumpGCEncodeData(MethodDesc method, MethodWithGCInfo methodCodeNode)
+        {
+            byte[] gcInfo = methodCodeNode.GCInfo;
+            if (gcInfo is null || gcInfo.Length == 0)
+                return;
+
+            string methodName = method.ToString();
+
+            // Hex dump of raw GC info bytes
+            Console.WriteLine($"== GC Encode Data for: {methodName} ==");
+            Console.WriteLine($"  Raw GC Info ({gcInfo.Length} bytes):");
+            for (int i = 0; i < gcInfo.Length; i += 16)
+            {
+                Console.Write($"    {i:X4}: ");
+                int end = Math.Min(i + 16, gcInfo.Length);
+                for (int j = i; j < end; j++)
+                {
+                    Console.Write($"{gcInfo[j]:X2} ");
+                }
+                Console.WriteLine();
+            }
+
+            // Decode and dump logical GC info contents
+            try
+            {
+                DumpDecodedGCInfo(gcInfo, methodName);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"  [Failed to decode GC info: {ex.Message}]");
+            }
+
+            Console.WriteLine($"== End GC Encode Data for: {methodName} ==");
+            Console.WriteLine();
+        }
+
+        private void DumpDecodedGCInfo(byte[] gcInfo, string methodName)
+        {
+            Console.WriteLine($"  Decoded GC Info for: {methodName}");
+
+            // Determine target-specific encoding parameters
+            var arch = NodeFactory.Target.Architecture;
+            bool hasFixedStackParameterScratchArea = arch != Internal.TypeSystem.TargetArchitecture.Wasm32;
+            int codeLengthEncbase = arch switch
+            {
+                Internal.TypeSystem.TargetArchitecture.ARM => 7,
+                Internal.TypeSystem.TargetArchitecture.X86 => 6,
+                Internal.TypeSystem.TargetArchitecture.Wasm32 => 6,
+                _ => 8
+            };
+            int numSafePointsEncbase = arch switch
+            {
+                Internal.TypeSystem.TargetArchitecture.X64 => 2,
+                Internal.TypeSystem.TargetArchitecture.X86 => 4,
+                Internal.TypeSystem.TargetArchitecture.Wasm32 => 4,
+                _ => 3
+            };
+            int numInterruptibleRangesEncbase = arch switch
+            {
+                Internal.TypeSystem.TargetArchitecture.ARM => 2,
+                _ => 1
+            };
+            int sizeOfStackAreaEncbase = arch switch
+            {
+                Internal.TypeSystem.TargetArchitecture.X86 => 6,
+                Internal.TypeSystem.TargetArchitecture.Wasm32 => 6,
+                _ => 3
+            };
+
+            int bitOffset = 0;
+
+            // First bit is slim/fat discriminator
+            bool isFatHeader = ReadBit(gcInfo, ref bitOffset);
+
+            bool isVarArg = false;
+            bool hasSecurityObject = false;
+            bool hasGSCookie = false;
+            bool hasPSPSym = false;
+            int genericsContextBits = 0;
+            bool hasStackBaseRegister = false;
+            bool wantsReportOnlyLeaf = false;
+            bool hasEditAndContinue = false;
+            bool hasReversePInvokeFrame = false;
+            bool slimHeader;
+
+            if (!isFatHeader)
+            {
+                // Slim header: only hasStackBaseRegister follows
+                hasStackBaseRegister = ReadBit(gcInfo, ref bitOffset);
+                slimHeader = true;
+            }
+            else
+            {
+                // Fat header: 10 additional flag bits
+                isVarArg = ReadBit(gcInfo, ref bitOffset);
+                hasSecurityObject = ReadBit(gcInfo, ref bitOffset);
+                hasGSCookie = ReadBit(gcInfo, ref bitOffset);
+                hasPSPSym = ReadBit(gcInfo, ref bitOffset);
+                genericsContextBits = ReadBits(gcInfo, 2, ref bitOffset);
+                hasStackBaseRegister = ReadBit(gcInfo, ref bitOffset);
+                wantsReportOnlyLeaf = ReadBit(gcInfo, ref bitOffset);
+                hasEditAndContinue = ReadBit(gcInfo, ref bitOffset);
+                hasReversePInvokeFrame = ReadBit(gcInfo, ref bitOffset);
+                slimHeader = false;
+            }
+
+            string genericsContext = genericsContextBits switch
+            {
+                0 => "None",
+                1 => "MethodTable",
+                2 => "MethodDesc",
+                3 => "This",
+                _ => "Unknown"
+            };
+
+            Console.WriteLine($"    SlimHeader: {slimHeader}");
+            Console.WriteLine($"    Flags: IsVarArg={isVarArg}, HasSecurityObject={hasSecurityObject}, HasGSCookie={hasGSCookie}");
+            Console.WriteLine($"           HasPSPSym={hasPSPSym}, GenericsContext={genericsContext}");
+            Console.WriteLine($"           HasStackBaseRegister={hasStackBaseRegister}, WantsReportOnlyLeaf={wantsReportOnlyLeaf}");
+            Console.WriteLine($"           HasEditAndContinue={hasEditAndContinue}, HasReversePInvokeFrame={hasReversePInvokeFrame}");
+
+            uint codeLength = DecodeVarLengthUnsigned(gcInfo, codeLengthEncbase, ref bitOffset);
+            Console.WriteLine($"    CodeLength: {codeLength}");
+
+            if (hasFixedStackParameterScratchArea && !slimHeader)
+            {
+                uint sizeOfStackArea = DecodeVarLengthUnsigned(gcInfo, sizeOfStackAreaEncbase, ref bitOffset);
+                Console.WriteLine($"    SizeOfStackOutgoingAndScratchArea: {sizeOfStackArea}");
+            }
+
+            uint numSafePoints = DecodeVarLengthUnsigned(gcInfo, numSafePointsEncbase, ref bitOffset);
+            Console.WriteLine($"    NumSafePoints: {numSafePoints}");
+
+            if (!slimHeader)
+            {
+                uint numInterruptibleRanges = DecodeVarLengthUnsigned(gcInfo, numInterruptibleRangesEncbase, ref bitOffset);
+                Console.WriteLine($"    NumInterruptibleRanges: {numInterruptibleRanges}");
+            }
+        }
+
+        private static bool ReadBit(byte[] data, ref int bitOffset)
+        {
+            int byteIndex = bitOffset / 8;
+            int bitIndex = bitOffset % 8;
+            bitOffset++;
+            if (byteIndex >= data.Length)
+                return false;
+            return ((data[byteIndex] >> bitIndex) & 1) != 0;
+        }
+
+        private static int ReadBits(byte[] data, int numBits, ref int bitOffset)
+        {
+            int value = 0;
+            for (int i = 0; i < numBits; i++)
+            {
+                if (ReadBit(data, ref bitOffset))
+                    value |= (1 << i);
+            }
+            return value;
+        }
+
+        private static uint DecodeVarLengthUnsigned(byte[] data, int base_, ref int bitOffset)
+        {
+            // Variable length encoding: read base_ bits at a time, high bit indicates more
+            uint value = 0;
+            int shift = 0;
+            while (true)
+            {
+                uint chunk = (uint)ReadBits(data, base_ + 1, ref bitOffset);
+                value |= (chunk & ((1u << base_) - 1)) << shift;
+                if ((chunk & (1u << base_)) == 0)
+                    break;
+                shift += base_;
+            }
+            return value;
         }
 
         private void EnsureInstantiationReferencesArePresentForExternalMethod(MethodDesc method)

@@ -521,6 +521,8 @@ namespace ILCompiler.Reflection.ReadyToRun
                 if (GcInfoRva != 0)
                 {
                     int gcInfoOffset = _readyToRunReader.CompositeReader.GetOffset(GcInfoRva);
+                    Console.WriteLine("GcInfoRva: " + GcInfoRva);
+                    Console.WriteLine("GcInfoOffset: " + gcInfoOffset);
                     if (_readyToRunReader.Machine == Machine.I386)
                     {
                         _gcInfo = new x86.GcInfo(_readyToRunReader.ImageReader, gcInfoOffset);

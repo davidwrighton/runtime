@@ -673,11 +673,13 @@ namespace ILCompiler
                         .UseILProvider(ilProvider)
                         .UseBackendOptions(Get(_command.CodegenOptions))
                         .UseLogger(logger)
-                        .UseParallelism(Get(_command.Parallelism))
+                        .UseParallelism(Get(_command.DumpGCEncodeData) ? 1 : Get(_command.Parallelism))
                         .UseResilience(Get(_command.Resilient))
                         .UseDependencyTracking(trackingLevel)
                         .UseCompilationRoots(compilationRoots)
                         .UseOptimizationMode(optimizationMode);
+
+                    builder.UseDumpGCEncodeData(Get(_command.DumpGCEncodeData));
 
                     if (Get(_command.EnableGenericCycleDetection))
                     {

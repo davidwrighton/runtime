@@ -20,6 +20,16 @@
 #include "ilstubcache.h"
 #include "sigbuilder.h"
 
+#ifdef TARGET_WASM
+#define DUMP_R2R_GCINFO
+#endif
+
+#ifdef DUMP_R2R_GCINFO
+#include "gcinfodecoder.h"
+#include "typestring.h"
+PTR_VOID GetUnwindDataBlob(TADDR moduleBase, PTR_RUNTIME_FUNCTION pRuntimeFunction, /* out */ SIZE_T * pSize);
+#endif
+
 #ifdef FEATURE_PERFMAP
 #include "perfmap.h"
 #endif
@@ -1415,6 +1425,45 @@ PCODE ReadyToRunInfo::GetEntryPoint(MethodDesc * pMD, PrepareCodeConfig* pConfig
 #error "ReadyToRun and PortableEntryPoints are not currently compatible on non-WASM targets, as the R2R image layout would need to be changed to support this scenario."
 #endif
 #endif
+
+#ifdef DUMP_R2R_GCINFO
+#ifdef USE_GC_INFO_DECODER
+    {
+        TADDR baseAddress = dac_cast<TADDR>(GetImage()->GetBase());
+        SIZE_T nUnwindDataSize;
+        PTR_VOID pUnwindData = GetUnwindDataBlob(baseAddress, &m_pRuntimeFunctions[id], &nUnwindDataSize);
+        PTR_BYTE gcInfoAddr = dac_cast<PTR_BYTE>(pUnwindData) + nUnwindDataSize;
+
+        READYTORUN_HEADER * pR2RHeader = GetReadyToRunHeader();
+        UINT32 gcInfoVersion = GCInfoToken::ReadyToRunVersionToGcInfoVersion(pR2RHeader->MajorVersion, pR2RHeader->MinorVersion);
+        GCInfoToken gcInfoToken = { gcInfoAddr, gcInfoVersion };
+
+        GcInfoDecoder decoder(gcInfoToken, DECODE_EVERYTHING, 0);
+
+        SString fullMethodName;
+        TypeString::AppendMethodInternal(fullMethodName, pMD, TypeString::FormatNamespace | TypeString::FormatFullInst | TypeString::FormatSignature);
+//        StackScratchBuffer nameScratch;
+        const char* szMethodName = fullMethodName.GetUTF8();
+
+        printf("R2R GCInfo for: %s\n", szMethodName);
+        printf("  CodeLength: %u\n", decoder.GetCodeLength());
+        printf("  IsVarArg: %s\n", decoder.GetIsVarArg() ? "true" : "false");
+        printf("  IsInterruptible: %s\n", decoder.IsInterruptible() ? "true" : "false");
+        printf("  HasInterruptibleRanges: %s\n", decoder.HasInterruptibleRanges() ? "true" : "false");
+        printf("  StackBaseRegister: %u\n", decoder.GetStackBaseRegister());
+        printf("  SizeOfEditAndContinuePreservedArea: %u\n", decoder.GetSizeOfEditAndContinuePreservedArea());
+        printf("  SizeOfStackParameterArea: %u\n", decoder.GetSizeOfStackParameterArea());
+/*        printf("  NumSlots: %u\n", decoder.GetNumSlots());
+        printf("  NumRegisters: %u\n", decoder.GetNumRegisters());
+        printf("  NumTracked: %u\n", decoder.GetNumTracked());
+        printf("  NumUntracked: %u\n", decoder.GetNumUntracked());*/
+        printf("  ReversePInvokeFrameStackSlot: %d\n", decoder.GetReversePInvokeFrameStackSlot());
+        printf("  GenericsInstContextStackSlot: %d\n", decoder.GetGenericsInstContextStackSlot());
+        printf("  GSCookieStackSlot: %d\n", decoder.GetGSCookieStackSlot());
+        fflush(stdout);
+    }
+#endif // USE_GC_INFO_DECODER
+#endif // DUMP_R2R_GCINFO
 
 #ifdef PROFILING_SUPPORTED
         {

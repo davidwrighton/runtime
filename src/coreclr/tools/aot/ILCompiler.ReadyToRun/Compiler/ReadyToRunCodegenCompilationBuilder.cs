@@ -49,6 +49,7 @@ namespace ILCompiler
 
         private string _jitPath;
         private string _outputFile;
+        private bool _dumpGcEncodeData;
 
         // These need to provide reasonable defaults so that the user can optionally skip
         // calling the Use/Configure methods and still get something reasonable back.
@@ -227,6 +228,12 @@ namespace ILCompiler
             return this;
         }
 
+        public ReadyToRunCodegenCompilationBuilder UseDumpGCEncodeData(bool dumpGcEncodeData)
+        {
+            _dumpGcEncodeData = dumpGcEncodeData;
+            return this;
+        }
+
         public override ICompilation ToCompilation()
         {
             // TODO: only copy COR headers for single-assembly build and for composite build with embedded MSIL
@@ -353,7 +360,8 @@ namespace ILCompiler
                 _r2rFileLayoutAlgorithm,
                 _customPESectionAlignment,
                 _verifyTypeAndFieldLayout,
-                _format);
+                _format,
+                _dumpGcEncodeData);
         }
     }
 }

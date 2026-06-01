@@ -2710,7 +2710,10 @@ void Compiler::compInitOptions(JitFlags* jitFlags)
 
         opts.dspMetrics = (JitConfig.JitMetrics() != 0);
     }
-
+            if (JitConfig.JitGCDump().contains(info.compMethodHnd, info.compClassHnd, &info.compMethodInfo->args))
+            {
+                opts.dspGCtbls = true;
+            }
     if (verboseDump)
     {
         opts.dspCode    = true;
