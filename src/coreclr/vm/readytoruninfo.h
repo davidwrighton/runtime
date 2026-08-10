@@ -29,6 +29,9 @@ class ReadyToRunCoreInfo
 private:
     PTR_ReadyToRunLoadedImage       m_pLayout;
     PTR_READYTORUN_CORE_HEADER      m_pCoreHeader;
+#ifdef TARGET_WASM
+    TADDR                           m_minVirtualIP = 0;
+#endif // TARGET_WASM
     Volatile<bool>                  m_fForbidLoadILBodyFixups;
     friend struct ::cdac_data<ReadyToRunCoreInfo>;
 
@@ -40,6 +43,10 @@ public:
     IMAGE_DATA_DIRECTORY * FindSection(ReadyToRunSectionType type) const;
     void ForbidProcessMoreILBodyFixups() { m_fForbidLoadILBodyFixups = true; }
     bool IsForbidProcessMoreILBodyFixups() { return m_fForbidLoadILBodyFixups; }
+#ifdef TARGET_WASM
+    void SetMinVirtualIP(TADDR minVirtualIP) { m_minVirtualIP = minVirtualIP; }
+    TADDR GetMinVirtualIP() const { return m_minVirtualIP; }
+#endif
 
     PTR_ReadyToRunLoadedImage GetImage() const
     {

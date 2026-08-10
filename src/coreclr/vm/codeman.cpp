@@ -7244,8 +7244,12 @@ BOOL ReadyToRunJitManager::JitCodeToMethodInfo(RangeSection * pRangeSection,
 #endif // FEATURE_COLD_R2R_CODE
 
     MethodDesc *pMethodDesc;
+    int initialMethodIndex = MethodIndex;
     while ((pMethodDesc = pInfo->GetMethodDescForEntryPoint(ImageBase + RUNTIME_FUNCTION__BeginAddress(pRuntimeFunctions + MethodIndex))) == NULL)
+    {
         MethodIndex--;
+        _ASSERTE(MethodIndex >= 0);
+    }
 
     PTR_RUNTIME_FUNCTION FunctionEntry = pRuntimeFunctions + MethodIndex;
 

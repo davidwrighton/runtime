@@ -424,6 +424,19 @@ PCODE MethodDesc::GetPrecompiledCode(PrepareCodeConfig* pConfig, bool shouldTier
     if (pCode != (PCODE)NULL)
     {
         LOG_USING_R2R_CODE(this);
+#ifdef FEATURE_PORTABLE_ENTRYPOINTS
+#ifdef LOGGING
+        if (LoggingOn(LF_ZAP, LL_INFO10000))
+        {
+            // On portable-entrypoint (wasm) targets, the R2R entrypoint is published into this method's portable entrypoint as a side effect.
+            // The portable entrypoint is used for all calls to this method, so we don't need to do anything else here.
+            uint32_t functionTableIndex = (uint32_t)PortableEntryPoint::GetActualCode(pCode);
+            TADDR virtualIP = ExecutionManager::GetWasmVirtualIPFromFunctionTableIndex(functionTableIndex);
+            LOG((LF_ZAP, LL_INFO10000, "ZAP: FunctionTableIndex %d, VirtualIP: " FMT_ADDR "\n", functionTableIndex, DBG_ADDR(virtualIP)));
+        }
+#endif
+#endif
+
 
 #ifdef FEATURE_TIERED_COMPILATION
         // Finalize the optimization tier before SetNativeCode() is called

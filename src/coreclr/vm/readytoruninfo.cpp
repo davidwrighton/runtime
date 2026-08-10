@@ -682,8 +682,19 @@ PTR_ReadyToRunInfo ReadyToRunInfo::Initialize(Module * pModule, AllocMemTracker 
     }
 
     void * pMemory = pamTracker->Track(pHeap->AllocMem((S_SIZE_T)sizeof(ReadyToRunInfo)));
-    DoLog("Ready to Run initialized successfully");
+    DoLog(nativeImage != NULL ? "Ready to Run initialized successfully (composite)" : "Ready to Run initialized successfully");
+#ifdef LOGGING
+    if (LoggingOn(LF_ZAP, LL_INFO1000))
+    {
+        SString assemblyPath{ pFile->GetPath() };
+        // On some hosts (e.g. wasm) assemblies are loaded from memory and have no
+        // file path, which would otherwise log as an empty string. Fall back to the
+        // assembly simple name so the log identifies which module the entry is for.
+        LPCUTF8 assemblyName = assemblyPath.IsEmpty() ? pFile->GetSimpleName() : assemblyPath.GetUTF8();
 
+        LOG((LF_ZAP, LL_INFO1000, "ZAP: Loading ReadyToRunInfo for Module %s, " FMT_ADDR ", NativeImage: " FMT_ADDR "\n", assemblyName, DBG_ADDR(pModule), DBG_ADDR(nativeImage)));
+    }
+#endif
     return new (pMemory) ReadyToRunInfo(pModule, pModule->GetLoaderAllocator(), pHeader, nativeImage, loadedImage, pamTracker);
 }
 
@@ -2902,31 +2913,40 @@ void ReadyToRunInfo::RegisterVirtualIPRange(Module* pModule)
     if (m_nRuntimeFunctions == 0)
         return;
 
-    TADDR imageBase = dac_cast<TADDR>(m_pComposite->GetLayout()->GetBase());
+    if (m_pComposite->GetMinVirtualIP() == 0)
+    {
+        TADDR imageBase = dac_cast<TADDR>(m_pComposite->GetLayout()->GetBase());
 
-    // The last RUNTIME_FUNCTION entry's BeginAddress is the virtual IP index of that entry.
-    // Total virtual IPs = lastEntry.BeginAddress + virtualIPCount(lastEntry)
-    T_RUNTIME_FUNCTION* pLastEntry = &m_pRuntimeFunctions[m_nRuntimeFunctions - 1];
-    UINT32 lastEntryVirtualIPIndex = RUNTIME_FUNCTION__BeginAddress(pLastEntry);
+        // The last RUNTIME_FUNCTION entry's BeginAddress is the virtual IP index of that entry.
+        // Total virtual IPs = lastEntry.BeginAddress + virtualIPCount(lastEntry)
+        T_RUNTIME_FUNCTION* pLastEntry = &m_pRuntimeFunctions[m_nRuntimeFunctions - 1];
+        UINT32 lastEntryVirtualIPIndex = RUNTIME_FUNCTION__BeginAddress(pLastEntry);
 
-    // Decode the virtual IP count from the last entry's unwind data.
-    // Unwind format: ULEB128(frameSize) ULEB128(virtualIPCount)
-    PTR_BYTE pUnwindData = dac_cast<PTR_BYTE>(imageBase + pLastEntry->UnwindData);
-    DecodeULEB128AsU32(&pUnwindData); // skip frame size
-    UINT32 lastEntryVIPCount = DecodeULEB128AsU32(&pUnwindData) * 2; // Multiply by 2 to force all virtual IPs to be an even number.
+        // Decode the virtual IP count from the last entry's unwind data.
+        // Unwind format: ULEB128(frameSize) ULEB128(virtualIPCount)
+        PTR_BYTE pUnwindData = dac_cast<PTR_BYTE>(imageBase + pLastEntry->UnwindData);
+        DecodeULEB128AsU32(&pUnwindData); // skip frame size
+        UINT32 lastEntryVIPCount = DecodeULEB128AsU32(&pUnwindData) * 2; // Multiply by 2 to force all virtual IPs to be an even number.
 
-    UINT32 totalVirtualIPs = lastEntryVirtualIPIndex + lastEntryVIPCount;
+        UINT32 totalVirtualIPs = lastEntryVirtualIPIndex + lastEntryVIPCount;
 
-    m_minVirtualIP = ExecutionManager::AddVirtualIPRange(
-        totalVirtualIPs,
-        ExecutionManager::GetReadyToRunJitManager(),
-        pModule);
+        m_pComposite->SetMinVirtualIP(ExecutionManager::AddVirtualIPRange(
+            totalVirtualIPs,
+            ExecutionManager::GetReadyToRunJitManager(),
+            pModule));
+        m_pCompositeInfo->m_minVirtualIP = m_pComposite->GetMinVirtualIP();
 
-    ExecutionManager::AddFunctionTableIndexRange(
-        m_minFunctionTableIndex,
-        m_nRuntimeFunctions,
-        pModule);
+        ExecutionManager::AddFunctionTableIndexRange(
+            m_minFunctionTableIndex,
+            m_nRuntimeFunctions,
+            pModule);
+
+        LOG((LF_ZAP, LL_INFO1000, "ZAP: MinVirtualIP = " FMT_ADDR " totalVirtualIps = %x minFunctionTableIndex = %d nRuntimeFunctions = %d\n", DBG_ADDR(m_pComposite->GetMinVirtualIP()), (int)totalVirtualIPs, m_minFunctionTableIndex, (int)m_nRuntimeFunctions));
+    }
+
+    m_minVirtualIP = m_pComposite->GetMinVirtualIP();
 }
+
 #endif // TARGET_WASM
 
 #endif // DACCESS_COMPILE
