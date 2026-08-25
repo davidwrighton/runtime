@@ -1670,6 +1670,7 @@ public:
     //*******************************************************************************
     // Returns the address of the native code.
     PCODE GetNativeCode();
+    PCODE GetNativeCodeVolatile();
 
     // Returns either the jitted code or the interpreter code (will not return the InterpreterStub which GetNativeCode might return)
     PCODE GetCodeForInterpreterOrJitted()

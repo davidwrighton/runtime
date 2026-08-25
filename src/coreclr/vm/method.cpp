@@ -1105,6 +1105,28 @@ PCODE MethodDesc::GetNativeCode()
     return GetStableEntryPoint();
 }
 
+PCODE MethodDesc::GetNativeCodeVolatile()
+{
+    WRAPPER_NO_CONTRACT;
+    SUPPORTS_DAC;
+    _ASSERTE(!IsDefaultInterfaceMethod() || HasNativeCodeSlot());
+    if (HasNativeCodeSlot())
+    {
+        PCODE pCode = VolatileLoad<PCODE>(GetAddrOfNativeCodeSlot());
+
+#ifdef TARGET_ARM
+        if (pCode != (PCODE)NULL)
+            pCode |= THUMB_CODE;
+#endif
+        return pCode;
+    }
+
+    if (!HasStableEntryPoint() || HasPrecode())
+        return (PCODE)NULL;
+
+    return VolatileLoad<PCODE>(GetAddrOfSlot());
+}
+
 PCODE MethodDesc::GetNativeCodeAnyVersion()
 {
     WRAPPER_NO_CONTRACT;

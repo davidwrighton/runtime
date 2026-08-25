@@ -61,6 +61,7 @@ public:
     NativeCodeVersionId GetVersionId() const;
     BOOL IsDefaultVersion() const;
     PCODE GetNativeCode() const;
+    PCODE GetNativeCodeVolatile() const;
     ReJITID GetILCodeVersionId() const;
 
 #ifdef FEATURE_CODE_VERSIONING
@@ -285,6 +286,7 @@ public:
     PTR_MethodDesc GetMethodDesc() const; // Can be called without any locks
     NativeCodeVersionId GetVersionId() const; // Can be called without any locks
     PCODE GetNativeCode() const; // Can be called without any locks, but result may be stale if it wasn't already set
+    PCODE GetNativeCodeVolatile() const;
     ReJITID GetILVersionId() const; // Can be called without any locks
     ILCodeVersion GetILCodeVersion() const;// Can be called without any locks
     BOOL IsActiveChildVersion() const;

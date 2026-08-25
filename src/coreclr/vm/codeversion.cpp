@@ -30,6 +30,7 @@
 NativeCodeVersion::NativeCodeVersion(PTR_MethodDesc pMethod) : m_pMethodDesc(pMethod) {}
 BOOL NativeCodeVersion::IsDefaultVersion() const { return TRUE; }
 PCODE NativeCodeVersion::GetNativeCode() const { return m_pMethodDesc->GetNativeCode(); }
+PCODE NativeCodeVersion::GetNativeCodeVolatile() const { return m_pMethodDesc->GetNativeCodeVolatile(); }
 ReJITID NativeCodeVersion::GetILCodeVersionId() const { return 0; }
 
 #ifndef DACCESS_COMPILE
@@ -86,6 +87,12 @@ PCODE NativeCodeVersionNode::GetNativeCode() const
 {
     LIMITED_METHOD_DAC_CONTRACT;
     return m_pNativeCode;
+}
+
+PCODE NativeCodeVersionNode::GetNativeCodeVolatile() const
+{
+    LIMITED_METHOD_DAC_CONTRACT;
+    return VolatileLoad(&m_pNativeCode);
 }
 
 ReJITID NativeCodeVersionNode::GetILVersionId() const
@@ -221,6 +228,19 @@ PCODE NativeCodeVersion::GetNativeCode() const
     else
     {
         return GetMethodDesc()->GetNativeCode();
+    }
+}
+
+PCODE NativeCodeVersion::GetNativeCodeVolatile() const
+{
+    LIMITED_METHOD_DAC_CONTRACT;
+    if (m_storageKind == StorageKind::Explicit)
+    {
+        return AsNode()->GetNativeCodeVolatile();
+    }
+    else
+    {
+        return GetMethodDesc()->GetNativeCodeVolatile();
     }
 }
 
@@ -1553,7 +1573,7 @@ NativeCodeVersion CodeVersionManager::GetNativeCodeVersion(PTR_MethodDesc pMetho
     NativeCodeVersionCollection nativeCodeVersions = GetNativeCodeVersions(pMethod);
     for (NativeCodeVersionIterator cur = nativeCodeVersions.Begin(), end = nativeCodeVersions.End(); cur != end; cur++)
     {
-        if (cur->GetNativeCode() == codeStartAddress)
+        if (cur->GetNativeCodeVolatile() == codeStartAddress)
         {
             return *cur;
         }
