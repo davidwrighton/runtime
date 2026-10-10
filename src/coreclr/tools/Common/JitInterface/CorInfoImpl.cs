@@ -570,6 +570,7 @@ namespace Internal.JitInterface
                     }
                 }
             }
+            _methodCodeNode.FinalizePrecodeFixups();
 
             if (_synthesizedPgoDependencies != null)
             {

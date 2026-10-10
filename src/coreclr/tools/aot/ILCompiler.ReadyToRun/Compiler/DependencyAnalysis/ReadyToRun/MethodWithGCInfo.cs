@@ -29,6 +29,10 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         private byte[] _debugVarInfos;
         private DebugEHClauseInfo[] _debugEHClauseInfos;
         private List<ISymbolNode> _fixups;
+        private HashSet<MethodWithGCInfo> _directCallTargets;
+        private HashSet<Signature> _moduleEagerFixups;
+        private HashSet<Signature> _guaranteedPrecodeFixups;
+        private bool _precodeFixupsFinalized;
         private MethodDesc[] _inlinedMethods;
         private bool _lateTriggeredCompilation;
         private DependencyList _nonRelocationDependencies;
@@ -96,6 +100,65 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         public bool IsJitHelper { get; set; }
 
         public List<ISymbolNode> Fixups => _fixups;
+
+        internal void AddDirectCallTarget(MethodWithGCInfo target)
+        {
+            _directCallTargets ??= new HashSet<MethodWithGCInfo>();
+            _directCallTargets.Add(target);
+        }
+
+        internal void AddModuleEagerFixup(Signature fixup)
+        {
+            _moduleEagerFixups ??= new HashSet<Signature>();
+            _moduleEagerFixups.Add(fixup);
+        }
+
+        internal void FinalizePrecodeFixups()
+        {
+            Debug.Assert(!_precodeFixupsFinalized);
+            _precodeFixupsFinalized = true;
+
+            HashSet<Signature> coveredFixups = null;
+
+            if (_moduleEagerFixups is not null)
+            {
+                coveredFixups = new HashSet<Signature>(_moduleEagerFixups);
+                _guaranteedPrecodeFixups = new HashSet<Signature>(_moduleEagerFixups);
+            }
+
+            if (_directCallTargets is not null)
+            {
+                foreach (MethodWithGCInfo target in _directCallTargets)
+                {
+                    Debug.Assert(target._precodeFixupsFinalized);
+                    if (target._guaranteedPrecodeFixups is null)
+                        continue;
+
+                    coveredFixups ??= new HashSet<Signature>();
+                    _guaranteedPrecodeFixups ??= new HashSet<Signature>();
+                    coveredFixups.UnionWith(target._guaranteedPrecodeFixups);
+                    _guaranteedPrecodeFixups.UnionWith(target._guaranteedPrecodeFixups);
+                }
+            }
+
+            foreach (ISymbolNode fixup in _fixups)
+            {
+                if (fixup is Import import)
+                {
+                    _guaranteedPrecodeFixups ??= new HashSet<Signature>();
+                    _guaranteedPrecodeFixups.Add(import.Signature);
+                }
+            }
+
+            // Making a direct callee ReadyToRun applies its transitive fixup requirements first.
+            // Module-eager fixups are likewise guaranteed before any method precode executes.
+            if (coveredFixups is not null)
+            {
+                _fixups.RemoveAll(fixup =>
+                    fixup is Import import &&
+                    coveredFixups.Contains(import.Signature));
+            }
+        }
 
         public int Size => _methodCode.Data.Length;
 

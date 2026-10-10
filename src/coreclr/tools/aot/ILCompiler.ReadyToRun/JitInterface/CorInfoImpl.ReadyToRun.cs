@@ -523,10 +523,16 @@ namespace Internal.JitInterface
 
         partial void RecordRelocationDependencies(ISymbolNode relocTarget)
         {
+            if (relocTarget is Import { Table.IsEager: true } eagerImport)
+            {
+                _methodCodeNode.AddModuleEagerFixup(eagerImport.Signature);
+            }
+
             if (relocTarget is MethodWithGCInfo method &&
                 _relocationDrivenPrecodeFixups?.TryGetValue(method, out ISymbolNode fixup) == true)
             {
                 AddPrecodeFixup(fixup);
+                _methodCodeNode.AddDirectCallTarget(method);
             }
         }
 
@@ -534,6 +540,11 @@ namespace Internal.JitInterface
         {
             _additionalDependencies ??= new DependencyList();
             _additionalDependencies.Add(node, reason);
+
+            if (node is Import { Table.IsEager: true } eagerImport)
+            {
+                _methodCodeNode.AddModuleEagerFixup(eagerImport.Signature);
+            }
         }
 
         private void AddResumptionStubFixup(MethodWithGCInfo compiledStubNode)
