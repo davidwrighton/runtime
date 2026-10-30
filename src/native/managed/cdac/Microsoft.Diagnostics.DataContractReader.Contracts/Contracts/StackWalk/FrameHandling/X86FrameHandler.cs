@@ -39,20 +39,6 @@ internal class X86FrameHandler(Target target, ContextHolder<X86Context> contextH
         bool hasDecoder;
         switch (frameType)
         {
-            case FrameType.PrestubMethodFrame:
-            case FrameType.CallCountingHelperFrame:
-                TargetPointer gcRefMap = _frameHelpers.GetGCRefMapForFrame(framedMethodFrame.Address);
-                if (gcRefMap != TargetPointer.Null)
-                {
-                    decoder = new(_target, gcRefMap);
-                    hasDecoder = true;
-                }
-                else
-                {
-                    hasDecoder = TryCreateSignatureGCRefMapDecoder(framedMethodFrame.MethodDescPtr, out decoder);
-                }
-                break;
-
             case FrameType.ExternalMethodFrame:
                 ExternalMethodFrame externalFrame = _target.ProcessedData.GetOrAdd<ExternalMethodFrame>(framedMethodFrame.Address);
                 hasDecoder = TryCreateGCRefMapDecoder(externalFrame.Indirection, out decoder) ||
@@ -72,16 +58,7 @@ internal class X86FrameHandler(Target target, ContextHolder<X86Context> contextH
                     }
                     else
                     {
-                        TargetPointer dispatchMap = _frameHelpers.GetGCRefMapForFrame(framedMethodFrame.Address);
-                        if (dispatchMap != TargetPointer.Null)
-                        {
-                            decoder = new(_target, dispatchMap);
-                            hasDecoder = true;
-                        }
-                        else
-                        {
-                            hasDecoder = TryCreateSignatureGCRefMapDecoder(methodDescPtr, out decoder);
-                        }
+                        hasDecoder = TryCreateSignatureGCRefMapDecoder(methodDescPtr, out decoder);
                     }
                 }
                 break;
@@ -115,7 +92,7 @@ internal class X86FrameHandler(Target target, ContextHolder<X86Context> contextH
         if (!_target.Contracts.CallingConvention.TryComputeArgGCRefMapBlob(md, out byte[] blob) || blob.Length == 0)
             return false;
 
-        decoder = new(blob, legacyTokens: GCRefMapDecoder.UsesLegacyTokens(_target));
+        decoder = new(blob);
         return true;
     }
 

@@ -12,8 +12,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         public override bool StaticDependenciesAreComputed => true;
 
         public abstract void AppendMangledName(NameMangler nameMangler, Utf8StringBuilder sb);
-        public virtual int Offset => 0;
-        int ISymbolNode.Offset => 0;
+        public int Offset => 0;
         public override int ClassCode => ClassCode;
 
         protected override string GetName(NodeFactory factory) => this.GetMangledName(factory.NameMangler);

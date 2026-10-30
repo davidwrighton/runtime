@@ -629,9 +629,6 @@ public class TestPlaceholderTarget : Target
         public override void RegisterUnsupported<TContract>(string version)
             => _unsupportedVersions.Add((typeof(TContract), version));
 
-        public override bool TryGetContractVersion<TContract>([NotNullWhen(true)] out string? version)
-            => _versions.TryGetValue(typeof(TContract), out version);
-
         public override bool TryGetContract<TContract>([NotNullWhen(true)] out TContract contract, [NotNullWhen(false)] out System.Exception? failureException)
         {
             contract = default!;

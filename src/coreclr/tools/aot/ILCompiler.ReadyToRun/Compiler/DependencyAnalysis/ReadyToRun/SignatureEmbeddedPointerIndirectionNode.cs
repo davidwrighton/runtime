@@ -28,10 +28,7 @@ namespace ILCompiler.DependencyAnalysis
         public override void EncodeData(ref ObjectDataBuilder dataBuilder, NodeFactory factory, bool relocsOnly)
         {
             dataBuilder.RequireInitialPointerAlignment();
-            int delta = _import.Table.EmitGCRefMap && !relocsOnly
-                ? -((MethodFixupSignature)Target).GetGCRefMap(factory).Length
-                : 0;
-            dataBuilder.EmitReloc(Target, RelocType.IMAGE_REL_BASED_ADDR32NB, delta);
+            dataBuilder.EmitReloc(Target, RelocType.IMAGE_REL_BASED_ADDR32NB);
         }
     
         public override void AppendMangledName(NameMangler nameMangler, Utf8StringBuilder sb)

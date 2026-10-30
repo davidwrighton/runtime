@@ -22,7 +22,6 @@
 #include "array.h"
 #include "ecall.h"
 #include "virtualcallstub.h"
-#include "gcrefmap.h"
 #include "../debug/ee/debugger.h"
 
 #include "CachedInterfaceDispatchPal.h"
@@ -1736,9 +1735,6 @@ PCODE MakeUnboxingStubWorker(MethodDesc *pMD)
 
     _ASSERTE(pUnboxedMD != NULL && pUnboxedMD != pMD);
 
-    if (pUnboxedMD->RequiresInstArg())
-        pUnboxedMD->PrepareForUseAsADependencyOfANativeImage();
-
 #ifdef FEATURE_PORTABLE_SHUFFLE_THUNKS
     StackSArray<ShuffleEntry> portableShuffle;
     BOOL usePortableShuffle = FALSE;
@@ -1802,8 +1798,6 @@ PCODE MakeInstantiatingStubWorker(MethodDesc *pMD)
     // Fetch the shared code associated with this instantiation
     pSharedMD = pMD->GetWrappedMethodDesc();
     _ASSERTE(pSharedMD != NULL && pSharedMD != pMD);
-    // The wrapper inserts a generic context argument that is absent from dispatch maps.
-    pSharedMD->PrepareForUseAsADependencyOfANativeImage();
 
     if (pMD->HasMethodInstantiation())
     {
@@ -2998,16 +2992,7 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
 
         PTR_DWORD pSignatures = dac_cast<PTR_DWORD>(pNativeImage->GetRvaData(pImportSection->Signatures));
 
-        PTR_BYTE pGCRefMap = dac_cast<PTR_BYTE>(pNativeImage->GetRvaData(pSignatures[index]));
-        PCCOR_SIGNATURE pBlob = pGCRefMap;
-        if ((pImportSection->Flags & ReadyToRunImportSectionFlags::GCRefMap) != ReadyToRunImportSectionFlags::None)
-        {
-            pBlob = GCRefMapDecoder::Skip(pBlob);
-        }
-        else
-        {
-            pGCRefMap = nullptr;
-        }
+        PCCOR_SIGNATURE pBlob = (BYTE *)pNativeImage->GetRvaData(pSignatures[index]);
 
         BYTE kind = *pBlob++;
 
@@ -3042,6 +3027,8 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
                 _ASSERTE(pInfoModule->IsFullModule());
                 pMD = MemberLoader::GetMethodDescFromMethodDef(static_cast<Module*>(pInfoModule), MethodDef, FALSE);
 
+                pMD->PrepareForUseAsADependencyOfANativeImage();
+
                 // Activate the target explicitly.
                 pMD->EnsureActive();
 
@@ -3057,6 +3044,8 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
                 MemberLoader::GetDescFromMemberRef(pInfoModule, MemberRef, &pMD, &pFD, &typeContext, FALSE /* strict metadata checks */, &th);
                 _ASSERTE(pMD != NULL);
 
+                pMD->PrepareForUseAsADependencyOfANativeImage();
+
                 // Activate the target explicitly.
                 pMD->EnsureActive();
 
@@ -3068,7 +3057,7 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
                 pMD = ZapSig::DecodeMethod(pModule, pInfoModule, pBlob, &th);
 
         VirtualEntry:
-                pMD->PrepareForUseAsAVirtualCallTargetOfANativeImage(pGCRefMap);
+                pMD->PrepareForUseAsADependencyOfANativeImage();
 
                 if (pMD->IsVtableMethod())
                 {
@@ -3217,9 +3206,6 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
         {
             _ASSERTE(pMD != NULL);
 
-            _ASSERTE(!pModule->IsCollectible());
-            pMD->PrepareForUseAsACallTargetOfANativeImage(pGCRefMap);
-
             {
                 // Switch to cooperative mode to avoid racing with GC stackwalk
                 GCX_COOP_THREAD_EXISTS(CURRENT_THREAD);
@@ -3227,10 +3213,9 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
             }
 
 #if _DEBUG
-            // Recomputing an unprepared signature would reintroduce the avoided type loads.
-            if (pMD->HaveNativeImageDependenciesBeenPrepared() && pGCRefMap != nullptr)
+            if (pEMFrame->GetGCRefMap() != NULL)
             {
-                _ASSERTE(CheckGCRefMapEqual(pGCRefMap, pMD, false));
+                _ASSERTE(CheckGCRefMapEqual(pEMFrame->GetGCRefMap(), pMD, false));
             }
 #endif // _DEBUG
 
@@ -3243,7 +3228,7 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
             MethodDesc* pTargetMD = PortableEntryPoint::GetMethodDesc(pEntryPoint);
             if (pTargetMD->ShouldCallPrestub())
             {
-                (void)pTargetMD->DoPrestub(nullptr, CallerGCMode::Coop);
+                (void)pTargetMD->DoPrestub(NULL);
             }
 
             MethodDesc::EnsurePortableEntryPointIsCallableFromR2R(pEntryPoint);
@@ -3251,43 +3236,22 @@ EXTERN_C PCODE STDCALL ExternalMethodFixupWorker(
 #else // !FEATURE_PORTABLE_ENTRYPOINTS
             pCode = pMD->GetMethodEntryPoint();
 
-            bool ranPrestub = !pMD->IsVtableMethod() && DoesSlotCallPrestub(pCode);
-            if (ranPrestub)
-            {
-                EX_TRY
-                {
-                    pMD->CheckRestore();
-                    CONSISTENCY_CHECK(GetAppDomain()->CheckCanExecuteManagedCode(pMD));
-                    pCode = pMD->DoPrestub(nullptr, CallerGCMode::Coop);
-                }
-                EX_CATCH
-                {
-                    GCX_COOP();
-                    OBJECTHANDLE ohThrowable = CURRENT_THREAD->LastThrownObjectHandle();
-                    if (ohThrowable != nullptr)
-                    {
-                        StackTraceInfo::AppendElement(ObjectFromHandle(ohThrowable), 0, reinterpret_cast<UINT_PTR>(pTransitionBlock), pMD, nullptr);
-                    }
-                    EX_RETHROW;
-                }
-                EX_END_CATCH
-            }
-
-            // Tiering can return code without publishing an entrypoint past the prestub.
-            PCODE pPublishedEntryPoint = pMD->GetMethodEntryPoint();
-            if (!DoesSlotCallPrestub(pPublishedEntryPoint))
+            //
+            // Note that we do not want to call code:MethodDesc::ShouldCallPrestub() here. It does not take remoting
+            // interception into account and so it would cause otherwise intercepted methods to be JITed. It is a compat
+            // issue if the JITing fails.
+            //
+            if (!DoesSlotCallPrestub(pCode))
             {
                 if (pMD->IsVersionableWithVtableSlotBackpatch())
                 {
                     // The entry point for this method needs to be versionable, so use a FuncPtrStub similarly to what is done
                     // in MethodDesc::GetMultiCallableAddrOfCode()
                     GCX_COOP();
-                    pPublishedEntryPoint = pMD->GetLoaderAllocator()->GetFuncPtrStubs()->GetFuncPtrStub(pMD);
+                    pCode = pMD->GetLoaderAllocator()->GetFuncPtrStubs()->GetFuncPtrStub(pMD);
                 }
 
-                PCODE pPatchedEntryPoint = PatchNonVirtualExternalMethod(pMD, pPublishedEntryPoint, pIndirection);
-                if (!ranPrestub)
-                    pCode = pPatchedEntryPoint;
+                pCode = PatchNonVirtualExternalMethod(pMD, pCode, pIndirection);
             }
 #endif // FEATURE_PORTABLE_ENTRYPOINTS
         }
@@ -3676,10 +3640,6 @@ PCODE DynamicHelperFixup(TransitionBlock * pTransitionBlock, TADDR * pCell, DWOR
     PTR_DWORD pSignatures = dac_cast<PTR_DWORD>(pNativeImage->GetRvaData(pImportSection->Signatures));
 
     PCCOR_SIGNATURE pBlob = (BYTE *)pNativeImage->GetRvaData(pSignatures[index]);
-    if ((pImportSection->Flags & ReadyToRunImportSectionFlags::GCRefMap) != ReadyToRunImportSectionFlags::None)
-    {
-        pBlob = GCRefMapDecoder::Skip(pBlob);
-    }
     PCCOR_SIGNATURE pBlobStart = pBlob;
 
     ReadyToRunFixupKind kind = (ReadyToRunFixupKind)*pBlob++;
@@ -3744,7 +3704,6 @@ PCODE DynamicHelperFixup(TransitionBlock * pTransitionBlock, TADDR * pCell, DWOR
     case READYTORUN_FIXUP_DelegateCtor:
         {
             pMD = ZapSig::DecodeMethod(pModule, pInfoModule, pBlob, &th);
-            pMD->PrepareForUseAsADependencyOfANativeImage();
             if (pMD->RequiresInstArg())
             {
                 pMD = MethodDesc::FindOrCreateAssociatedMethodDesc(pMD,

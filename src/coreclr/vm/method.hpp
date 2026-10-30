@@ -238,6 +238,9 @@ enum MethodDescFlags
     // Method is static
     mdfStatic                           = 0x0080,
 
+    mdfValueTypeParametersWalked        = 0x0100, // Indicates that all typeref's in the signature of the method have been resolved
+                                                  // to typedefs (or that process failed).
+
     mdfValueTypeParametersLoaded        = 0x0200, // Indicates if the valuetype parameter types have been loaded.
 
     // Duplicate method. When a method needs to be placed in multiple slots in the
@@ -275,7 +278,6 @@ struct MethodDescCodeData final
     NativeCodeVersion::OptimizationTier OptimizationTier;
 #endif // FEATURE_CODE_VERSIONING
     PCODE TemporaryEntryPoint;
-    PTR_BYTE GCRefMap;
 #ifdef FEATURE_INTERPRETER
     InterpreterCalliCookie CalliCookie;
 #endif // FEATURE_INTERPRETER
@@ -1012,9 +1014,6 @@ public:
         WRAPPER_NO_CONTRACT;
         return IsMdInstanceInitializer(GetAttrs(), GetName());
     }
-
-    bool IsStringCtor();
-    bool IsObjectReturningCtor();
 
     inline DWORD IsFinal()
     {
@@ -1884,47 +1883,12 @@ public:
 
     void WalkValueTypeParameters(MethodTable *pMT, WalkValueTypeParameterFnPtr function, void *pData);
 
-    PTR_BYTE GetGCRefMap();
-    // Exact entry frames can use their own map, including explicit generic-context arguments.
-    // Dispatch and borrowing use only ABI-compatible maps; slot relationships are immutable
-    // DispatchMap data. Memoize hits only when code data already exists; never allocate here.
-    PTR_BYTE FindGCRefMap(MethodTable* pReceiverMT = nullptr, bool isDispatch = false);
-    void SetGCRefMap(PTR_BYTE pGCRefMap);
-
-    // Publish on the already-resolved call declaration; do not search slots or decode maps.
-    // Every supported R2R image uses contextual THIS, so no format check is necessary.
-    // Without an import map, use only this method's cached map or prepare signature layouts.
-    void PrepareForUseAsAVirtualCallTargetOfANativeImage(PTR_BYTE pGCRefMap = nullptr);
-
-    // Load closed value-type signature layouts for signature-scanning frames and ABI lowering.
-    // Required for interpreter ABI lowering, argument-transforming stubs, and map misses.
-    // A GCRefMap hit alone never promises layout readiness.
     void PrepareForUseAsADependencyOfANativeImage()
     {
         WRAPPER_NO_CONTRACT;
-        if (!HaveNativeImageDependenciesBeenPrepared())
+        if (!HaveValueTypeParametersBeenWalked())
             PrepareForUseAsADependencyOfANativeImageWorker();
     }
-
-    // Prepare an exact method entrypoint, not a virtual-dispatch stub or an interpreter ABI.
-    // Non-wrapper targets, including explicit-context generic bodies, can use supplied or
-    // cached exact GCRefMaps instead of loading layouts. nullptr permits reuse, not forced loading.
-    // Callers requiring signature layouts must use PrepareForUseAsADependencyOfANativeImage.
-    void PrepareForUseAsACallTargetOfANativeImage(PTR_BYTE pGCRefMap = nullptr);
-
-    bool HaveNativeImageDependenciesBeenPrepared()
-    {
-        LIMITED_METHOD_DAC_CONTRACT;
-        return (VolatileLoad(&m_bFlags4) & enum_flag4_NativeImageDependenciesPrepared) != 0;
-    }
-
-#ifndef DACCESS_COMPILE
-    void SetNativeImageDependenciesPrepared()
-    {
-        LIMITED_METHOD_CONTRACT;
-        InterlockedUpdateFlags4(enum_flag4_NativeImageDependenciesPrepared, TRUE);
-    }
-#endif // !DACCESS_COMPILE
 
     void PrepareForUseAsAFunctionPointer();
 
@@ -1940,7 +1904,6 @@ public:
 #endif
 private:
     void PrepareForUseAsADependencyOfANativeImageWorker();
-    PTR_BYTE CacheGCRefMapIfCodeDataExists(PTR_BYTE pGCRefMap);
 
     //================================================================
     // The actual data stored in a MethodDesc follows.
@@ -1974,7 +1937,6 @@ protected:
 #ifdef FEATURE_PORTABLE_ENTRYPOINTS
         enum_flag4_PendingThunkResolution                   = 0x10,
 #endif
-        enum_flag4_NativeImageDependenciesPrepared          = 0x20,
     };
 
     BYTE        m_bFlags4; // Used to hold more flags
@@ -2307,6 +2269,20 @@ public:
     }
 
     SIZE_T SizeOf();
+
+    inline BOOL HaveValueTypeParametersBeenWalked()
+    {
+        LIMITED_METHOD_DAC_CONTRACT;
+        return (m_wFlags & mdfValueTypeParametersWalked) != 0;
+    }
+
+#ifndef DACCESS_COMPILE
+    inline void SetValueTypeParametersWalked()
+    {
+        LIMITED_METHOD_CONTRACT;
+        InterlockedUpdateFlags(mdfValueTypeParametersWalked, TRUE);
+    }
+#endif // DACCESS_COMPILE
 
     inline BOOL HaveValueTypeParametersBeenLoaded()
     {

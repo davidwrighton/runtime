@@ -198,15 +198,12 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 frame[argit.GetAsyncContinuationArgOffset()] = CORCOMPILE_GCREFMAP_TOKENS.GCREFMAP_REF;
             }
 
-            // Keep every receiver contextual, even for nonvirtual reference-type methods:
-            // cached maps can flow through interface declarations to unboxed value-type entries,
-            // and dispatch relationships can change across versions. Plain REF/INTERIOR tokens
-            // would freeze the receiver kind instead of letting each frame interpret it.
+            // If the function has a this pointer, add it to the mask
             if (argit.HasThis)
             {
-                frame[_transitionBlock.ThisOffset] = method.OwningType.IsValueType && !isUnboxingStub
-                    ? CORCOMPILE_GCREFMAP_TOKENS.GCREFMAP_THIS_BYREF
-                    : CORCOMPILE_GCREFMAP_TOKENS.GCREFMAP_THIS_REF;
+                bool interior = method.OwningType.IsValueType && !isUnboxingStub;
+
+                frame[_transitionBlock.ThisOffset] = (interior ? CORCOMPILE_GCREFMAP_TOKENS.GCREFMAP_INTERIOR : CORCOMPILE_GCREFMAP_TOKENS.GCREFMAP_REF);
             }
 
             if (argit.IsVarArg)

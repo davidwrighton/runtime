@@ -35,6 +35,7 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         private readonly ArrayOfEmbeddedPointersNode<Signature> _signatures;
         // TODO: annoying - cannot enumerate the ArrayOfEmbeddedPointersNode so we must keep a copy.
         private readonly List<Signature> _signatureList;
+        private readonly GCRefMapNode _gcRefMap;
 
         private readonly ReadyToRunImportSectionType _type;
         private readonly ReadyToRunImportSectionFlags _flags;
@@ -48,13 +49,14 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
         {
             _name = name;
             _type = importType;
-            _flags = flags | (emitGCRefMap ? ReadyToRunImportSectionFlags.GCRefMap : ReadyToRunImportSectionFlags.None);
+            _flags = flags;
             _entrySize = entrySize;
             _emitPrecode = emitPrecode;
 
             _imports = new ImportTable(_name + "_ImportBegin", entrySize);
             _signatures = new ArrayOfEmbeddedPointersNode<Signature>(_name + "_SigBegin", new EmbeddedObjectNodeComparer(CompilerComparer.Instance));
             _signatureList = new List<Signature>();
+            _gcRefMap = emitGCRefMap ? new GCRefMapNode(this) : null;
         }
 
         public void MaterializeSignature(NodeFactory r2rFactory)
@@ -86,17 +88,12 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 _signatureList.Add(import.ImportSignature.Target);
             }
 
-            if (EmitGCRefMap)
-            {
-                ((MethodFixupSignature)import.Signature).EmitGCRefMap = true;
-            }
+            _gcRefMap?.AddImport(import);
         }
 
         public string Name => _name;
 
         public bool EmitPrecode => _emitPrecode;
-
-        public bool EmitGCRefMap => (_flags & ReadyToRunImportSectionFlags.GCRefMap) != 0;
 
         public bool IsEager => (_flags & ReadyToRunImportSectionFlags.Eager) != 0;
 
@@ -134,13 +131,26 @@ namespace ILCompiler.DependencyAnalysis.ReadyToRun
                 dataBuilder.EmitUInt(0);
             }
 
-            dataBuilder.EmitUInt(0);
+            // If we emit an Rva for an empty gcrefmap, it will have no size header and be impossible for r2rdump to read correctly
+            if (_gcRefMap?.IsEmpty == false)
+            {
+                // This indirectly generates the AuxiliaryDataRva by emitting a placeholder 0 which will be replaced later
+                dataBuilder.EmitReloc(_gcRefMap, RelocType.IMAGE_REL_BASED_ADDR32NB, 0);
+            }
+            else
+            {
+                dataBuilder.EmitUInt(0);
+            }
         }
 
         public override void AddStaticDependencies(DependencySink sink, NodeFactory context)
         {
             sink.Add(_imports, "Import section fixup data");
             sink.Add(_signatures, "Import section signatures");
+            if (_gcRefMap != null)
+            {
+                sink.Add(_gcRefMap, "GC ref map");
+            }
         }
 
         protected override string GetName(NodeFactory context)
